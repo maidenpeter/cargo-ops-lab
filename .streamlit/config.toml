@@ -1,0 +1,35 @@
+# Ink theme, matched to the portfolio site (maidenpeter.github.io): ink and paper, gold for emphasis,
+# teal for good, oxblood for bad. One theme, so the custom CSS in lab/ui.py always matches.
+[theme]
+base = "dark"
+primaryColor = "#f0a63a"
+backgroundColor = "#15253b"
+secondaryBackgroundColor = "#1c2f46"
+textColor = "#ede7d8"
+linkColor = "#f0a63a"
+borderColor = "#3a4656"
+dataframeBorderColor = "#3a4656"
+dataframeHeaderBackgroundColor = "#0f1d2f"
+codeBackgroundColor = "#0f1d2f"
+showWidgetBorder = true
+baseRadius = "2px"
+font = "IBM Plex Sans Condensed:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600&display=swap"
+headingFont = "IM Fell English:https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap"
+headingFontWeights = 400
+codeFont = "monospace"
+redColor = "#d9694f"
+greenColor = "#25a3a4"
+orangeColor = "#f0a63a"
+yellowColor = "#f0a63a"
+blueColor = "#8fb3d9"
+chartCategoricalColors = ["#f0a63a", "#25a3a4", "#d9694f", "#8f98a3", "#c4c0b4", "#5cc9c9", "#ee8a72", "#5e6873", "#e6c48a", "#3d7f80"]
+
+[server]
+headless = true
+runOnSave = false
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "viewer"

@@ -1,0 +1,51 @@
+kpi,name,definition,formula,owner,decision,cut_by,sql
+nfd_on_time,NFD on time %,"Share of AWBs notified ready for pickup within the promise for their product, counted from aircraft arrival.",AWBs with NFD at or before ARR + promise / AWBs whose promise fell due before the cut-off,Handler,"How many staff each shift needs, and which arrivals supervisors should watch.","product, carrier, arrival shift, arrival hour","SELECT COUNT(*) AS scored,
+       COUNT(*) FILTER (WHERE nfd_ts <= due_ts) AS on_time,
+       COUNT(*) FILTER (WHERE nfd_ts <= due_ts) / COUNT(*) AS value
+FROM {awb}
+WHERE due_ts < $cutoff;"
+handler_time,Handler time p50 and p90,Hours from aircraft arrival to freight ready (ARR to NFD): the median and the slowest tenth.,"50th and 90th percentile of NFD - ARR, in hours, over AWBs with an NFD",Handler,"Whether the promise is realistic, and whether the tail or the typical AWB needs work.",product,"SELECT quantile_cont(epoch(nfd_ts - arr_ts) / 3600, 0.5) AS p50_h,
+       quantile_cont(epoch(nfd_ts - arr_ts) / 3600, 0.9) AS p90_h,
+       COUNT(*) AS n
+FROM {awb}
+WHERE nfd_ts IS NOT NULL;"
+customer_time,Customer time p50 and p90,"Hours from freight ready to delivery (NFD to DLV): customs holds, document checks and forwarder pickup.","50th and 90th percentile of DLV - NFD, in hours, over AWBs notified at least 7 days before the cut-off",Customer,Storage pricing and pickup reminders; not a terminal performance measure.,product,"SELECT quantile_cont(epoch(dlv_ts - nfd_ts) / 3600, 0.5) AS p50_h,
+       quantile_cont(epoch(dlv_ts - nfd_ts) / 3600, 0.9) AS p90_h,
+       COUNT(*) AS n
+FROM {awb}
+WHERE dlv_ts IS NOT NULL AND nfd_ts < $cutoff - INTERVAL 7 DAY;"
+dwell_split,Handler share of dwell,"Of the total time freight sits between arrival and delivery, the share on the handler's clock.",Sum of (NFD - ARR) / sum of (DLV - ARR),Both,Who to talk to about long dwell: the floor or the forwarder.,product,"SELECT SUM(epoch(nfd_ts - arr_ts)) / SUM(epoch(dlv_ts - arr_ts)) AS handler_share,
+       AVG(epoch(dlv_ts - arr_ts) / 3600) AS dwell_mean_h
+FROM {awb}
+WHERE dlv_ts IS NOT NULL AND nfd_ts < $cutoff - INTERVAL 7 DAY;"
+throughput,Breakdown throughput,Kilograms broken down per present staff hour.,Kg broken down in the shift / (present staff x shift hours),Handler,"Productivity by shift, and the work rate a roster plan should assume.",shift,"SELECT shift_name AS level,
+       SUM(kg) / SUM(present * $shift_hours) AS value,
+       SUM(present * $shift_hours) AS staff_hours
+FROM {shifts}
+WHERE present > 0
+GROUP BY 1
+ORDER BY 1;"
+backlog_at_shift_end,Backlog at shift end,AWBs that had arrived but were not yet received from the flight (no RCF) when a shift ended.,AWBs with ARR before the shift end - AWBs with RCF before the shift end,Handler,Whether one shift is handing its work to the next.,shift,"WITH arr_c AS (
+    SELECT arr_ts AS ts, SUM(COUNT(*)) OVER (ORDER BY arr_ts) AS cum FROM {awb} GROUP BY arr_ts
+), rcf_c AS (
+    SELECT rcf_ts AS ts, SUM(COUNT(*)) OVER (ORDER BY rcf_ts) AS cum FROM {awb} WHERE rcf_ts IS NOT NULL GROUP BY rcf_ts
+), ends AS (
+    SELECT shift_name, end_ts FROM {shifts} WHERE end_ts <= $cutoff AND end_ts > (SELECT MIN(arr_ts) FROM {awb}) + INTERVAL 1 DAY
+), b AS (
+    SELECT e.shift_name, e.end_ts, a.cum - COALESCE(r.cum, 0) AS backlog
+    FROM ends e
+    ASOF LEFT JOIN arr_c a ON e.end_ts > a.ts
+    ASOF LEFT JOIN rcf_c r ON e.end_ts > r.ts
+)
+SELECT shift_name AS level, AVG(backlog) AS value, quantile_cont(backlog, 0.9) AS p90, MAX(backlog) AS max
+FROM b
+GROUP BY 1
+ORDER BY 1;"
+late_per_1000,"Late shipments per 1,000 AWBs","Late AWBs for every thousand scored, the same measure as on-time % read as a count.","1,000 x late AWBs / scored AWBs",Handler,A count that operations and sales can both quote without converting percentages.,product,"SELECT 1000.0 * COUNT(*) FILTER (WHERE NOT COALESCE(nfd_ts <= due_ts, FALSE)) / COUNT(*) AS value
+FROM {awb}
+WHERE due_ts < $cutoff;"
+completeness,Data completeness,"Share of AWBs with all four milestones present and in order (ARR, RCF, NFD, DLV).",AWBs with ARR <= RCF <= NFD <= DLV all present / AWBs that arrived at least 14 days before the cut-off,Data,Whether the milestone feed can be trusted for the other measures this month.,"feed as received, and after cleaning","SELECT AVG(CASE WHEN arr_ts IS NOT NULL AND rcf_ts IS NOT NULL AND nfd_ts IS NOT NULL AND dlv_ts IS NOT NULL
+                 AND arr_ts <= rcf_ts AND rcf_ts <= nfd_ts AND nfd_ts <= dlv_ts THEN 1.0 ELSE 0.0 END) AS value,
+       COUNT(*) AS n
+FROM {awb}
+WHERE arr_ts < $cutoff - INTERVAL 14 DAY;"

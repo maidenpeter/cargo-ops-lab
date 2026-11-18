@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+build.log
+data/_pytest.xml
+# raw event logs (about 50 MB): rebuilt exactly from the seed by scripts/build_results.py
+data/logs/
+.streamlit/secrets.toml
+streamlit.log

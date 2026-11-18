@@ -1,0 +1,142 @@
+# Cargo Ops Lab
+
+Defining the measures, cleaning the data, predicting late freight, and staffing the floor to prevent it.
+
+**Live app: [cargo-ops-lab.streamlit.app](https://cargo-ops-lab.streamlit.app/)**. Synthetic terminal. Illustrative only.
+
+At an import cargo terminal, which shipments will miss their promised ready time, how many staff does each shift need
+to stop that, and what happens to the plan when the flight schedule breaks? This lab answers on a simulated terminal
+at a Gulf hub: 230,796 air waybills (AWBs) and 65,139 tonnes landed between April 2025 and the
+data cut-off on 30 September 2026. On the normal timetable, the optimized roster delivers 94.6% on time against 91.9% for the legacy roster, with 1,354 staff hours a week against 1,456. When 40% of arrivals bunch into waves, the roster built on the normal timetable delivers 85.1% on time. Re-planning from the live schedule gets back to 91.0% for 104 more staff hours a week. Keeping the normal-timetable roster and adding a call-in pool of 4 staff, called when more than 60 AWBs wait for breakdown, does better still: 93.7% on time for 96 call-in hours a week.
+Even with 20% less freight, on-time performance under the normal-timetable roster falls from 94.6% to 93.8% once 40% of flights bunch into waves.
+
+![When the Schedule Breaks, with 40% of flights moved into waves and the re-planned policy selected](assets/screenshots/disruption_waves_1280.webp)
+
+## The answer in numbers
+
+Every figure below is read from `data/headline.json`, which the build writes from the stored results.
+
+| Question | Answer |
+|---|---|
+| How often is freight ready within the promise? | 93.3% of AWBs (NFD on time), cleaned data, legacy roster |
+| How long does the terminal take? | Median 1.9 hours from arrival to ready; the slowest tenth over 4.8 hours |
+| Whose clock is the dwell on? | The handler holds 15.5% of the time between arrival and delivery; the customer the rest |
+| What does dirty data do? | Taken as received, the feed reads 92.0% on time against a true 93.5%; after repair and quarantine, 93.3% |
+| The time zone gotcha alone | Unchecked, the time zone defect alone moves on-time performance by 0.6 points (down), from 93.5% to 92.9%. |
+| Can lateness be predicted at arrival? | Gradient boosting: AUC 0.960 on the test months. Expediting the riskiest 10% of AWBs at arrival would reach 77% of the shipments that end up late. |
+| How many hands per shift? | Optimized roster: 94.6% on time on 1,354 staff hours a week, against 91.9% on 1,456 for the legacy roster |
+| When flights bunch into waves (40% moved) | Normal-timetable roster 85.1%, re-planned 91.0%, normal-timetable roster plus a call-in pool 93.7%, legacy 82.8% |
+| Does the risk model hold? | The risk model trained on normal months predicts a 14.3% late rate on the bunched arrivals; the actual rate is 16.9%. Its AUC moves from 0.959 to 0.954. |
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Terminal](assets/screenshots/terminal_1280.webp) **Terminal**: the synthetic terminal, the two clocks, the four numbers that matter | ![KPIs](assets/screenshots/kpis_1280.webp) **KPIs**: the KPI dictionary, live filters, on time by hour and weekday, handler against customer time |
+| ![Data Quality](assets/screenshots/dq_1280.webp) **Data Quality**: a rule per defect, precision and recall against the injected truth, the KPI under four versions of the data | ![Risk](assets/screenshots/risk_1280.webp) **Risk**: what the model may use, calibration, the expedite slider, what drives the score |
+| ![Roster](assets/screenshots/roster_1280.webp) **Roster**: legacy against optimized, service and cost, the frontier, the integer program | ![Disruption](assets/screenshots/disruption_1280.webp) **Disruption**: four policies against the same broken schedule, and the model's drift |
+| ![Methods](assets/screenshots/methods_1280.webp) **Methods**: every assumption with its reason, method choices, limits and tests | ![Phone](assets/screenshots/disruption_390.webp) **On a phone** |
+
+A 60 to 90 second walk-through (Terminal, then Disruption: moving 40% of flights into waves and switching from the
+static to the re-planned roster) goes here: `assets/screenshots/walkthrough.gif`.
+
+## Context
+
+- **Milestones.** The lab uses the import half of the Cargo iQ route map: arrival (ARR), received from flight at
+  breakdown (RCF), customer notified that freight is ready (NFD) and delivery (DLV). The handler's segment runs from
+  ARR to NFD. Source: IATA Cargo Webinars, Cargo iQ, 12 October 2020, slide 27, "Basic Cargo iQ Route Map"
+  ([PDF](https://www.iata.org/contentassets/23608a1cdaa543ef877cc617ce99d21e/cargo-iq-master-slides.pdf)).
+- **Scale of a Gulf hub.** Dubai International handled 2.15 million metric tonnes of cargo in 2025, eleventh in the
+  world and down 1.4% on the year before, according to the Airports Council International traffic dataset as reported
+  by Khaleej Times on 15 July 2026
+  ([article](https://www.khaleejtimes.com/business/aviation/dubai-airport-ranked-second-busiest-as-global-passenger-traffic-reaches-10-billion-in-2025)).
+- **A broken schedule is not hypothetical.** Reporting the airport operator's first-quarter 2026 traffic, Gulf News
+  gave cargo volumes of 399,600 tonnes, down 22.7%, under regional airspace disruption (last updated 4 May 2026,
+  [article](https://gulfnews.com/business/aviation/dubai-airport-powers-through-war-disruption-with-6-million-passengers-1.500527813)).
+  The original operator release is not linked from the article.
+- **Synthetic data.** Everything in the app comes from a seeded simulation. No terminal, airline, airport or system
+  vendor is named, carriers are "Carrier A" to "Carrier T", and origins are regions. Promises, work rates, costs and
+  penalties are illustrative assumptions in `config.yml`, not industry standards.
+
+## Method
+
+1. **Simulation.** A weekly timetable of belly and freighter flights becomes 18 months of arrivals with delays,
+   cancellations and seasonal volume. A SimPy model runs the floor: ULDs are towed in, intact ULDs are checked in,
+   everything else waits in one priority queue for the breakdown crew on shift (rostered headcount less random
+   absences), and NFD follows a document check. Customer time adds customs holds and forwarder pickup. One seed
+   fixes every draw.
+2. **KPI dictionary.** Eight measures on the milestones, each with a definition, formula, owner, the decision it
+   informs and the DuckDB SQL that computes it (`sql/kpis.sql`, `data/kpi_dictionary.csv`). Handler time and customer
+   time are kept apart.
+3. **Data quality.** A copy of the feed gets seven defects at known rates (missing RCF, missing NFD, NFD before RCF,
+   duplicate resends, weight keyed wrong, invalid product codes, UTC stamps labeled as local time). One SQL rule per
+   defect (`sql/dq_rules.sql`) is scored for precision and recall against the injected truth, and must flag nothing on
+   the clean log. Safe repairs (deduplicate, re-stamp from UTC) are made; everything else is quarantined.
+4. **Risk model.** Each AWB is scored at aircraft arrival with only what is known then (product, handling unit, size,
+   carrier, region, arrival hour and delay, rostered crew, backlog at arrival, AWBs due in the next two hours). Logistic
+   regression and gradient boosting, trained on April 2025 to March 2026, picked on April to June 2026 and tested on
+   July to September 2026. A test fails the build if a post-arrival field becomes a feature.
+5. **Roster.** For each weekday and shift, the headcount moves through its allowed range in simulation while the rest
+   of the roster stays put; a choose-one-per-shift integer program (PuLP with CBC) trades labor cost against late
+   penalties within the staff-hour budget and a limit on change from the legacy roster. Every roster is re-simulated
+   end to end before it is reported, because backlog carries from one shift to the next.
+6. **Disruption.** A share of flights is moved into arrival waves and volume is thinned, on the test months. Four
+   policies meet the same arrivals: legacy, the roster optimized on the normal timetable, a roster re-optimized on the
+   disrupted schedule, and the normal-timetable roster plus a call-in pool triggered by backlog. The risk model trained
+   on normal months is scored on the disrupted arrivals.
+
+## What I would do with real data
+
+- Map the lab's milestones to the handler's actual milestone feed and its message types, and agree each KPI's
+  definition and owner with operations before reporting it.
+- Validate the promise by product with the commercial team; the lab's live animals result shows a promise can be
+  tighter than the physical process allows.
+- Add the constraints the lab leaves out: breakdown teams and equipment, docks, storage, cool rooms and truck slots.
+- Measure the cost of a late shipment from contracts and claims rather than a config penalty, and add revenue.
+- Re-calibrate the risk model on a schedule, monitor its calibration by week, and retrain when the arrival pattern
+  changes.
+- Put the SQL rules and KPI definitions under version control with sign-off, and publish a data quality scorecard with
+  each monthly report.
+
+## Run it locally
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate             # Windows; on macOS or Linux: source .venv/bin/activate
+pip install -r requirements-build.txt
+python scripts/build_results.py    # simulation, data quality, KPIs, model, roster, disruption, tests (about 20 minutes)
+streamlit run app.py
+```
+
+`requirements.txt` is what the deployed app needs: it only reads the precomputed results in `data/`. The build adds
+SimPy, scikit-learn, PuLP with the CBC solver, pytest and Playwright (`requirements-build.txt`). The raw event logs
+(about 50 MB) are not committed; the build regenerates them exactly from the seed.
+`python scripts/capture.py` takes the screenshots once the app is running.
+
+Deployed on Streamlit Community Cloud with Python 3.12. Community Cloud's documented limits (as of February 2024, and
+subject to change) are about 2 CPU cores and 2.7 GB of memory at most; apps without traffic for 12 hours go to sleep
+and wake on the next visit.
+
+## Repository
+
+```
+app.py                  entry point and navigation
+pages/                  one file per page
+lab/                    config, schedule, SimPy terminal, defects, KPIs, model, roster, disruption, UI
+sql/                    kpis.sql, dq_rules.sql, features.sql
+scripts/                build_results.py, capture.py
+config.yml              every assumption, one comment each
+data/                   results the app reads, headline.json, kpi_dictionary.csv, test_results.csv
+tests/                  engine bounds, reconciliation, data quality recall, leakage, splits, headline
+docs/                   the README template (numbers are filled from data/headline.json)
+```
+
+## Why I built this
+
+_Placeholder for Marion, in her own voice._
+
+---
+
+Part of a portfolio at [maidenpeter.github.io](https://maidenpeter.github.io/), alongside the
+[Instalment Persistency Lab](https://instalment-persistency-lab.streamlit.app/) and the
+[Health IBNR Lab](https://maidenpeter.shinyapps.io/health-ibnr-lab/).

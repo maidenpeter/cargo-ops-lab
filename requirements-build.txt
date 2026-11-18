@@ -1,0 +1,7 @@
+# Everything needed to rebuild the results, run the tests and take the screenshots.
+-r requirements.txt
+simpy==4.1.2
+scikit-learn==1.9.1
+pulp[cbc]==4.2.0
+pytest==9.2.0
+playwright==1.65.2

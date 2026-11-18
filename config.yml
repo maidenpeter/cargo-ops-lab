@@ -1,0 +1,181 @@
+# Cargo Ops Lab: every assumption in one place.
+# Each value carries a one-line comment; the Methods page shows them all.
+# Every number here is an illustrative assumption for a synthetic terminal, not an industry standard.
+
+seed: 20260930                 # master seed; every random draw in the build derives from it
+hub_utc_offset_hours: 4        # hub local time is UTC plus this many hours
+
+window:
+  start: "2025-04-01"          # first day of scheduled arrivals in the history
+  cutoff: "2026-09-30"         # data cut-off; milestones after 23:59 on this day are not yet observed
+  run_on_days: 6               # the simulation keeps running this many days past the cut-off so open work can finish
+
+split:
+  train_end: "2026-03-31"      # model training uses arrivals from the start up to this day
+  valid_end: "2026-06-30"      # validation months follow training up to this day; the test months run to the cut-off
+
+shifts:
+  starts: [6, 14, 22]          # shift start hours (hub local): morning, afternoon, night; each shift is 8 hours
+  names: [Morning, Afternoon, Night]  # shift labels used on every page
+  hours: 8                     # paid hours per staff shift
+
+# ---------------------------------------------------------------- flights
+timetable:                     # weekly arrivals: flight, carrier, aircraft type, origin region, scheduled arrival (hub local), days (1 is Monday), mean AWBs per flight
+  - {flight: CA101, carrier: Carrier A, type: belly, region: Europe, sta: "06:10", days: "1234567", awbs: 12}
+  - {flight: CB201, carrier: Carrier B, type: belly, region: South Asia, sta: "06:45", days: "1234567", awbs: 10}
+  - {flight: CC301, carrier: Carrier C, type: belly, region: East Asia, sta: "07:20", days: "1234567", awbs: 11}
+  - {flight: CD401, carrier: Carrier D, type: belly, region: Africa, sta: "08:05", days: "1357", awbs: 8}
+  - {flight: CE501, carrier: Carrier E, type: belly, region: Europe, sta: "09:30", days: "1234567", awbs: 9}
+  - {flight: CF601, carrier: Carrier F, type: belly, region: Southeast Asia, sta: "11:40", days: "1234567", awbs: 10}
+  - {flight: CG701, carrier: Carrier G, type: belly, region: Gulf and Levant, sta: "12:15", days: "1234567", awbs: 6}
+  - {flight: CA103, carrier: Carrier A, type: belly, region: Europe, sta: "13:05", days: "1234567", awbs: 11}
+  - {flight: CH801, carrier: Carrier H, type: belly, region: Americas, sta: "14:20", days: "24567", awbs: 13}
+  - {flight: CI901, carrier: Carrier I, type: belly, region: South Asia, sta: "15:50", days: "1234567", awbs: 9}
+  - {flight: CJ111, carrier: Carrier J, type: belly, region: East Asia, sta: "17:30", days: "1234567", awbs: 12}
+  - {flight: CK121, carrier: Carrier K, type: belly, region: Africa, sta: "18:40", days: "246", awbs: 7}
+  - {flight: CB203, carrier: Carrier B, type: belly, region: South Asia, sta: "19:15", days: "1234567", awbs: 10}
+  - {flight: CL131, carrier: Carrier L, type: belly, region: Europe, sta: "20:05", days: "1234567", awbs: 10}
+  - {flight: CM141, carrier: Carrier M, type: belly, region: Southeast Asia, sta: "21:30", days: "1234567", awbs: 9}
+  - {flight: CN151, carrier: Carrier N, type: belly, region: Central Asia, sta: "22:40", days: "1357", awbs: 6}
+  - {flight: CC303, carrier: Carrier C, type: belly, region: East Asia, sta: "23:55", days: "1234567", awbs: 11}
+  - {flight: CO161, carrier: Carrier O, type: belly, region: Europe, sta: "01:20", days: "1234567", awbs: 10}
+  - {flight: CP171, carrier: Carrier P, type: belly, region: South Asia, sta: "02:45", days: "1234567", awbs: 9}
+  - {flight: CE503, carrier: Carrier E, type: belly, region: Europe, sta: "04:10", days: "1234567", awbs: 8}
+  - {flight: CQ181, carrier: Carrier Q, type: freighter, region: East Asia, sta: "22:15", days: "1234567", awbs: 45}
+  - {flight: CR191, carrier: Carrier R, type: freighter, region: Europe, sta: "23:30", days: "12345", awbs: 50}
+  - {flight: CS201, carrier: Carrier S, type: freighter, region: Americas, sta: "00:40", days: "246", awbs: 55}
+  - {flight: CT211, carrier: Carrier T, type: freighter, region: South Asia, sta: "01:50", days: "1234567", awbs: 40}
+  - {flight: CQ183, carrier: Carrier Q, type: freighter, region: Southeast Asia, sta: "02:30", days: "1357", awbs: 45}
+  - {flight: CA105, carrier: Carrier A, type: freighter, region: Europe, sta: "03:20", days: "23456", awbs: 48}
+  - {flight: CD403, carrier: Carrier D, type: freighter, region: Africa, sta: "04:05", days: "147", awbs: 35}
+  - {flight: CJ113, carrier: Carrier J, type: freighter, region: East Asia, sta: "05:00", days: "1357", awbs: 42}
+
+flights:
+  cancel_rate: 0.01            # share of scheduled flights that do not operate
+  awb_dispersion: 8            # gamma shape for AWBs per flight around the mean (lower means more variable loads)
+  season: [0.92, 0.94, 1.02, 1.00, 1.00, 0.96, 0.95, 0.97, 1.02, 1.05, 1.08, 1.06]  # volume factor by calendar month, January first
+  growth_per_year: 0.03        # underlying volume growth per year
+  delay:                       # arrival delay against schedule, minutes: normal core plus an occasional long tail
+    belly: {mean: 8, sd: 18, tail_prob: 0.08, tail_mean: 60}        # passenger aircraft carrying cargo in the hold
+    freighter: {mean: 15, sd: 30, tail_prob: 0.15, tail_mean: 90}   # all-cargo aircraft
+  earliest_min: -30            # no flight arrives more than this many minutes early
+
+# ---------------------------------------------------------------- shipments (air waybills)
+products:                      # share of AWBs by product
+  general: 0.59                # general cargo
+  express: 0.14                # express and courier consolidations
+  perishable: 0.12             # food and flowers
+  pharma: 0.05                 # temperature-controlled pharmaceuticals
+  dangerous_goods: 0.09        # regulated dangerous goods
+  live_animals: 0.01           # live animals
+handling_units:                # share of AWBs by handling unit, by aircraft type
+  belly: {bup_breakdown: 0.40, bup_intact: 0.05, loose: 0.55}       # built-up ULD to break down, built-up ULD kept intact for one consignee, loose
+  freighter: {bup_breakdown: 0.65, bup_intact: 0.15, loose: 0.20}   # freighters carry more built-up ULDs
+pieces_mean:                   # mean pieces per AWB, by aircraft type (1 plus a negative binomial draw)
+  belly: 5                     # belly AWBs are smaller
+  freighter: 9                 # freighter AWBs are larger
+kg_per_piece_median:           # median kilograms per piece (lognormal), by aircraft type
+  belly: 15                    # belly
+  freighter: 30                # freighter
+kg_per_piece_sigma: 0.9        # lognormal spread of kilograms per piece
+weight_check_noise: 0.03       # checked-in weight differs from the manifest by a normal draw with this relative spread
+weight_check_clip: 0.06        # and never by more than this share in clean data
+
+# ---------------------------------------------------------------- terminal process
+tow_min:                       # minutes from on-block until the first ULD reaches the terminal (uniform range)
+  belly: [15, 35]              # belly
+  freighter: [25, 50]          # freighter
+offload_spread_min:            # the last AWB on a flight reaches the terminal up to this many minutes after the first
+  belly: 20                    # belly
+  freighter: 75                # freighter
+intact_checkin_min: [8, 15]    # intact ULDs skip breakdown and are checked in within this range of minutes
+work:                          # breakdown work content, staff minutes per AWB
+  setup: {bup_breakdown: 12, loose: 5}   # fixed minutes per AWB by handling unit
+  per_piece: 0.8               # minutes per piece
+  per_100kg: 1.8               # minutes per 100 kg
+  noise_sigma: 0.3             # lognormal spread around the work content (mean kept at 1)
+  product_factor: {general: 1.0, express: 0.9, perishable: 1.1, pharma: 1.25, dangerous_goods: 1.3, live_animals: 1.2}  # extra checks by product
+priority_products: [live_animals, pharma, express, perishable]  # these jump the breakdown queue, in this order
+doc_check_median_min: 20       # median minutes from RCF to NFD for the documentation check (lognormal)
+doc_check_sigma: 0.5           # lognormal spread of the documentation check
+absence_rate: 0.06             # each rostered person is absent from a shift with this probability
+
+sla_hours:                     # promise from aircraft arrival (ARR) to freight ready (NFD), by product
+  express: 3                   # express
+  pharma: 4                    # pharma
+  perishable: 4                # perishable
+  live_animals: 2              # live animals
+  dangerous_goods: 6           # dangerous goods
+  general: 6                   # general cargo
+
+customer:                      # time the customer owns, NFD to DLV
+  hold_prob: {general: 0.06, express: 0.03, perishable: 0.04, pharma: 0.10, dangerous_goods: 0.12, live_animals: 0.08}  # chance of a customs or document hold, by product
+  hold_median_h: 20            # median length of a hold in hours (lognormal)
+  hold_sigma: 0.8              # lognormal spread of a hold
+  pickup_median_h: {general: 10, express: 2.5, perishable: 4, pharma: 5, dangerous_goods: 12, live_animals: 1.5}  # median forwarder pickup lag after NFD, hours
+  pickup_sigma: 0.9            # lognormal spread of the pickup lag
+
+# ---------------------------------------------------------------- staffing and cost
+legacy_roster:                 # historical headcount by weekday (Monday first) and shift; flat across the week, night sized to the average freighter bank
+  Morning: [6, 6, 6, 6, 6, 6, 6]       # 06:00 to 14:00
+  Afternoon: [5, 5, 5, 5, 5, 5, 5]     # 14:00 to 22:00
+  Night: [15, 15, 15, 15, 15, 15, 15]  # 22:00 to 06:00
+hourly_cost_usd: 20            # fully loaded labor cost per staff hour, synthetic USD
+late_penalty_usd:              # cost assigned to one late AWB, by product, synthetic USD
+  general: 25                  # general cargo
+  dangerous_goods: 40          # dangerous goods
+  express: 80                  # express
+  perishable: 100              # perishable
+  pharma: 150                  # pharma
+  live_animals: 200            # live animals
+
+roster_opt:
+  min_headcount: 3             # smallest crew allowed on any shift
+  max_headcount: 24            # largest crew allowed on any shift
+  max_change: 4                # most a shift may move from the legacy roster, so the plan can be rolled out
+  budget_multiplier: 1.0       # weekly staff-hour budget as a multiple of the legacy roster's hours
+  frontier_multipliers: [0.85, 0.90, 0.95, 1.00, 1.05, 1.10, 1.20]  # budgets swept for the frontier chart
+  seeds: 2                     # simulation seeds per grid point and per re-simulation (the disruption runs use the same seeds)
+  warmup_days: 7               # days simulated before the evaluation window so queues start realistic
+  passes: 2                    # grid passes; the second rebuilds the grid around the first answer
+
+flex:
+  pool_size: 4                 # staff in the call-in pool
+  backlog_trigger: 60          # AWBs waiting for breakdown that trigger a call-in
+  lead_time_min: 60            # minutes from the call to staff on the floor
+  block_hours: 4               # hours each call-in works
+  cost_multiplier: 1.5         # call-in hours cost this multiple of the normal hourly rate
+
+# ---------------------------------------------------------------- disruption scenarios
+disruption:
+  rescheduled_shares: [0.0, 0.2, 0.4, 0.6]    # share of flights moved into compressed arrival waves
+  volume_changes: [0.0, -0.1, -0.2, -0.3]      # change in AWB volume
+  wave_centers: ["04:00", "16:00"]             # centers of the arrival waves when corridors open (hub local)
+  wave_half_width_min: 45                      # rescheduled flights land within this many minutes of a wave center
+  headline_share: 0.4                          # rescheduled share quoted in the headline
+  headline_volume: -0.2                        # volume change quoted in the second headline sentence
+  notice_hours: 24                             # re-planning assumes the disrupted schedule is known this far ahead
+
+# ---------------------------------------------------------------- data quality
+defects:                       # share of AWBs hit by each defect in the dirty copy; an AWB gets at most one
+  missing_rcf: 0.008           # RCF message never arrives
+  missing_nfd: 0.010           # NFD message never arrives
+  out_of_sequence: 0.006       # NFD stamped before RCF
+  duplicate_resend: 0.015      # the whole AWB record is sent twice
+  weight_mismatch: 0.010       # checked-in weight keyed wrong
+  invalid_product: 0.007       # product code blank or not in the code list
+  timezone: 0.040              # timestamps stamped in UTC but labeled hub local
+  timezone_arr_share: 0.3      # share of timezone defects on the arrival stamp; the rest hit the terminal stamps (RCF and NFD)
+manual_channel_share: 0.35     # share of AWBs keyed through a manual channel that does not carry the UTC stamp
+weight_tolerance: 0.10         # relative gap between manifest and checked weight that a rule flags
+weight_tolerance_min_kg: 1.0   # and the gap must be at least this many kilograms, so rounding on tiny AWBs is not flagged
+missing_grace_hours: 48        # an AWB counts as missing a milestone only if it arrived this long before the cut-off
+dq_min_recall: 0.85            # each rule must catch at least this share of its injected defect (tested)
+
+# ---------------------------------------------------------------- risk model
+model:
+  expedite_share: 0.10         # share of AWBs supervisors expedite at arrival, for the headline catch rate
+  wave_window_hours: 2         # look-ahead window for the scheduled-arrivals feature
+  hgb: {max_iter: 300, learning_rate: 0.06, max_leaf_nodes: 31, min_samples_leaf: 80, l2_regularization: 1.0}  # gradient boosting settings, fixed before seeing the test months
+  calibration_bins: 10         # bins for the calibration curve (deciles of predicted risk)
+  permutation_repeats: 5       # shuffles per feature for permutation importance
