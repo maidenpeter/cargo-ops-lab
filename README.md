@@ -133,7 +133,22 @@ docs/                   the README template (numbers are filled from data/headli
 
 ## Why I built this
 
-_Placeholder for Marion, in her own voice._
+CargoShield, my other aviation project, looks at a cargo airline from the booking desk: is this shipment what it says
+it is, and what should cover for it cost? I wanted to see the other end, after the aircraft lands, when the same
+freight sits on a terminal floor and the promise to the customer starts to run out.
+
+The questions were familiar. Reserving taught me that a figure is only as good as the definitions and the data under
+it. A terminal's on-time rate has the same weak points: whose clock the waiting time is on, which milestones never
+arrived, which time stamps are in the wrong time zone. So the lab defines each measure first, breaks a copy of the
+feed on purpose and measures what each break does to the answer, and only then builds a model or a roster on it.
+
+The broken schedule is the question I most wanted answered. A roster that works on the normal timetable can fail
+quietly when flights bunch together, and this year's airspace disruption, which cut a major Gulf hub's first-quarter
+cargo by more than a fifth, made that less hypothetical. A simulation is the cheapest place to find out how far
+service falls, and what re-planning or a small call-in pool buys back.
+
+I had no terminal's data, so everything here comes from one seeded simulation and says so on every page. The method
+is what I would bring to real data, and the section above lists what I would change once I had it.
 
 ---
 
