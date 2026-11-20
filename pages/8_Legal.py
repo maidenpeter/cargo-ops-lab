@@ -71,7 +71,9 @@ if rec["status"] == "kept":
 else:
     with ui.plate(f"Shipment file: {rec['id']}", "What the record shows"):
         ui.prose(*[ui.esc(p) for p in S.verdict(rec)])
-st.download_button("Download this shipment file", S.file_text(rec), file_name=f"{rec['id']}.txt", mime="text/plain")
+st.download_button("Download this shipment file (HTML)", S.file_html(rec), file_name=f"{rec['id']}.html",
+                   mime="text/html", type="primary",
+                   help="A page that opens in any browser. Print it, or save it as a PDF, to keep with a claim.")
 
 # ---------------------------------------------------------------- promise tester
 ui.section("Test a promise before it goes into a contract",

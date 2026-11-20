@@ -5,6 +5,7 @@ data/model_predictions.parquet); nothing is simulated in the app.
 """
 from __future__ import annotations
 
+import html
 import re
 
 import pandas as pd
@@ -171,21 +172,65 @@ def verdict(rec: dict) -> list[str]:
     return out
 
 
-def file_text(rec: dict) -> str:
-    """A plain text shipment file to download and keep with a claim."""
-    lines = [f"Shipment file: {rec['id']}", ui.SYNTHETIC, ""]
-    if rec["status"] == "kept":
-        lines += [f"Flight: {rec['flight']} ({rec['carrier']}, {rec['aircraft']} from {rec['region']})",
-                  f"Cargo: {rec['product_label']}, {rec['pieces']} pieces, {rec['weight']:,.1f} kg, {rec['unit']}",
-                  f"Scheduled landing: {rec['sched']:%Y-%m-%d %H:%M}",
-                  f"Landed: {rec['arr']:%Y-%m-%d %H:%M}",
-                  f"Checked in: {rec['rcf']:%Y-%m-%d %H:%M}" if pd.notna(rec["rcf"]) else "Checked in: not recorded",
-                  f"Ready to collect: {rec['nfd']:%Y-%m-%d %H:%M}" if pd.notna(rec["nfd"]) else "Ready to collect: not recorded",
-                  f"Collected: {rec['dlv']:%Y-%m-%d %H:%M}" if pd.notna(rec["dlv"]) else "Collected: not recorded",
-                  f"Promise: {rec['sla_h']:g} hours from landing, due {rec['due']:%Y-%m-%d %H:%M}", ""]
-    lines += verdict(rec)
-    lines += ["", "Times are hub local time. This file is generated from a simulation and is not legal advice."]
-    return "\n".join(lines) + "\n"
+FILE_NOTE = "Times are hub local time. This file is generated from a simulation and is not legal advice."
+
+
+def _stamp_or_gap(ts) -> str:
+    return f"{ts:%Y-%m-%d %H:%M}" if pd.notna(ts) else "not recorded"
+
+
+def file_facts(rec: dict) -> list[tuple[str, str]]:
+    """The shipment file's facts as (label, value) pairs. A record set aside or not found has none, only its verdict."""
+    if rec["status"] != "kept":
+        return []
+    return [("Flight", f"{rec['flight']} ({rec['carrier']}, {rec['aircraft']} from {rec['region']})"),
+            ("Cargo", f"{rec['product_label']}, {rec['pieces']} pieces, {rec['weight']:,.1f} kg, {rec['unit']}"),
+            ("Scheduled landing", _stamp_or_gap(rec["sched"])),
+            ("Landed", _stamp_or_gap(rec["arr"])),
+            ("Checked in", _stamp_or_gap(rec["rcf"])),
+            ("Ready to collect", _stamp_or_gap(rec["nfd"])),
+            ("Collected", _stamp_or_gap(rec["dlv"])),
+            ("Promise", f"{rec['sla_h']:g} hours from landing, due {rec['due']:%Y-%m-%d %H:%M}")]
+
+
+# the shipment file is opened from a folder or an email long after the app is gone, so it carries everything with it:
+# system fonts, inline styles, no scripts, images or links, and a light page that prints as it looks
+FILE_CSS = """
+:root { color-scheme: light; --ink: #15253b; --muted: #5e6873; --rule: #c4c0b4; --gold: #b9781c; --paper: #fbf8f1; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink);
+       font: 11pt/1.55 Charter, "Bitstream Charter", Cambria, "Times New Roman", serif; }
+main { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1rem 3rem; }
+.label { margin: 0 0 .4rem; font: 600 8.5pt/1.4 system-ui, "Segoe UI", Arial, sans-serif; letter-spacing: .08em;
+         text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0 0 1.4rem; padding-bottom: .6rem; border-bottom: 2px solid var(--gold); font-weight: 400; font-size: 20pt;
+     line-height: 1.2; overflow-wrap: anywhere; }
+table { width: 100%; border-collapse: collapse; margin: 0 0 1.6rem; }
+th, td { padding: .4rem .6rem .4rem 0; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+th { width: 34%; font: 600 9.5pt/1.5 system-ui, "Segoe UI", Arial, sans-serif; color: var(--muted); }
+td { font-variant-numeric: lining-nums tabular-nums; }
+tr { break-inside: avoid; }
+section p { margin: 0 0 .8rem; }
+.note { margin-top: 1.8rem; padding: .7rem .9rem; border: 1px solid var(--rule); border-left: 3px solid var(--gold);
+        font: 9.5pt/1.5 system-ui, "Segoe UI", Arial, sans-serif; color: var(--muted); }
+@page { margin: 18mm; }
+@media print { body { background: none; } main { max-width: none; padding: 0; } }
+"""
+
+
+def file_html(rec: dict) -> str:
+    """The shipment file to download and keep with a claim: one self-contained page that opens in any browser and
+    prints, or saves as a PDF, from there. Every value is escaped, since the shipment number can be whatever was typed."""
+    e = html.escape
+    title = f"Shipment file: {rec['id']}"
+    rows = "".join(f'<tr><th scope="row">{e(k)}</th><td>{e(v)}</td></tr>' for k, v in file_facts(rec))
+    facts = f"<table>{rows}</table>\n" if rows else ""
+    said = "".join(f"<p>{e(p)}</p>" for p in verdict(rec))
+    return (f'<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
+            f'<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+            f"<title>{e(title)}</title>\n<style>{FILE_CSS}</style>\n</head>\n<body>\n<main>\n"
+            f'<p class="label">{e(ui.SYNTHETIC)}</p>\n<h1>{e(title)}</h1>\n{facts}<section>{said}</section>\n'
+            f'<p class="note">{e(FILE_NOTE)}</p>\n</main>\n</body>\n</html>\n')
 
 
 def examples() -> dict[str, str]:

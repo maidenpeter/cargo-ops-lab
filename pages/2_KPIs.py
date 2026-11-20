@@ -1,3 +1,5 @@
+import io
+
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -183,9 +185,19 @@ ui.hood("The KPI dictionary as an analyst would write it: the formal definition,
         "flight), NFD (notified for delivery) and DLV (delivered); an AWB (air waybill) is one shipment.")
 ui.ledger(kd[["name", "definition", "formula", "cut_by"]].rename(columns={
     "name": "KPI", "definition": "Definition", "formula": "Formula", "cut_by": "Cut by"}), doc=True)
-c1, c2 = st.columns([0.62, 0.38], vertical_alignment="bottom")
+
+
+@st.cache_data(show_spinner=False)
+def dictionary_xlsx(csv: bytes) -> bytes:
+    return kpis.dictionary_xlsx(pd.read_csv(io.BytesIO(csv)))
+
+
+raw = (C.DATA / "kpi_dictionary.csv").read_bytes()
+c1, c2, c3 = st.columns([0.5, 0.3, 0.2], vertical_alignment="bottom")
 pick = c1.selectbox("Show the SQL for", kd["name"].tolist(), index=0)
-c2.download_button("Download the dictionary (CSV)", (C.DATA / "kpi_dictionary.csv").read_bytes(),
-                   file_name="kpi_dictionary.csv", mime="text/csv", width="stretch")
+c2.download_button("Download the dictionary (Excel)", dictionary_xlsx(raw), file_name="kpi_dictionary.xlsx",
+                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="primary",
+                   width="stretch")
+c3.download_button("Or as CSV", raw, file_name="kpi_dictionary.csv", mime="text/csv", width="stretch")
 st.code(kd.set_index("name").loc[pick, "sql"], language="sql")
 ui.footer()

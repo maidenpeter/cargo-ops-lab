@@ -1,6 +1,7 @@
 """KPI computations. The SQL lives in sql/kpis.sql; this module runs it and holds the KPI dictionary."""
 from __future__ import annotations
 
+import io
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -130,3 +131,25 @@ def dictionary() -> pd.DataFrame:
     d = pd.DataFrame(DICTIONARY)
     d["sql"] = d["kpi"].map(lambda k: body(sql[k]))
     return d
+
+
+# column widths, in characters, for the Excel copy of the dictionary; anything longer wraps inside its cell
+XLSX_WIDTHS = {"kpi": 20, "name": 28, "definition": 48, "formula": 48, "owner": 10, "decision": 44, "cut_by": 30, "sql": 80}
+
+
+def dictionary_xlsx(d: pd.DataFrame) -> bytes:
+    """The KPI dictionary as an Excel workbook: the same columns as kpi_dictionary.csv, the header row frozen and
+    the long text wrapped so the definitions and the SQL read without resizing anything."""
+    from openpyxl.styles import Alignment
+
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as xl:
+        d.to_excel(xl, sheet_name="KPI dictionary", index=False)
+        ws = xl.sheets["KPI dictionary"]
+        ws.freeze_panes = "A2"
+        for i, col in enumerate(d.columns, start=1):
+            letter = ws.cell(row=1, column=i).column_letter
+            ws.column_dimensions[letter].width = XLSX_WIDTHS.get(col, 20)
+            for cell in ws[letter][1:]:
+                cell.alignment = Alignment(wrap_text=True, vertical="top")
+    return buf.getvalue()
