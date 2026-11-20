@@ -35,8 +35,18 @@ def test_no_company_names_in_the_app():
 
 
 def test_every_page_carries_the_synthetic_label():
+    from lab.ui import PAGES
+
     pages = sorted((C.ROOT / "pages").glob("*.py"))
-    assert len(pages) == 7
+    assert sorted(p.relative_to(C.ROOT).as_posix() for p in pages) == sorted(pg["file"] for pg in PAGES)
     for p in pages:
         assert "ui.page(" in p.read_text(encoding="utf-8"), p.name
     assert "Synthetic terminal. Illustrative only." in (C.ROOT / "lab" / "ui.py").read_text(encoding="utf-8")
+
+
+def test_every_page_opens_with_the_short_version():
+    """Each page a reader lands on starts with the plain-English question, answer and why it matters."""
+    for p in sorted((C.ROOT / "pages").glob("*.py")):
+        if p.stem in {"1_Terminal", "7_Methods"}:  # the overview tells the story; the appendix is reference
+            continue
+        assert "ui.short(" in p.read_text(encoding="utf-8"), p.name

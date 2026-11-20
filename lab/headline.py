@@ -87,43 +87,47 @@ def sentences(h: dict) -> dict:
     else:
         cost = f"with {-extra:,.0f} fewer staff hours a week"
     if h["dis_replanned"] > h["dis_static"]:
-        replan = f"Re-planning from the live schedule gets back to {pct(h['dis_replanned'])} {cost}."
+        replan = f"Re-planning the roster for the new schedule brings it back to {pct(h['dis_replanned'])} {cost}."
     else:
-        replan = (f"Re-planning from the live schedule does not beat it: {pct(h['dis_replanned'])} on time {cost}.")
-    headline = (f"When {share}% of arrivals bunch into waves, the roster built on the normal timetable delivers "
-                f"{pct(h['dis_static'])} on time. {replan}")
+        replan = (f"Re-planning the roster for the new schedule does not beat it: {pct(h['dis_replanned'])} on time {cost}.")
+    headline = (f"When {share}% of flights are squeezed into two daily rush hours, the roster built for the normal "
+                f"timetable gets {pct(h['dis_static'])} of shipments ready on time. {replan}")
 
     vol = round(-100 * h["vol_change"])
     if h["vol_static"] < h["base_static"]:
-        volume = (f"Even with {vol}% less freight, on-time performance under the normal-timetable roster falls from "
-                  f"{pct(h['base_static'])} to {pct(h['vol_static'])} once {share}% of flights bunch into waves.")
+        volume = (f"Even with {vol}% less freight, the recommended roster falls from {pct(h['base_static'])} to "
+                  f"{pct(h['vol_static'])} on time once {share}% of flights bunch into rush hours.")
     else:
-        volume = (f"With {vol}% less freight, the spare capacity absorbs the waves: on-time performance under the "
-                  f"normal-timetable roster is {pct(h['vol_static'])}, against {pct(h['base_static'])} on the normal timetable.")
+        volume = (f"With {vol}% less freight, the spare capacity absorbs the rush hours: the recommended roster gets "
+                  f"{pct(h['vol_static'])} on time, against {pct(h['base_static'])} on the normal timetable.")
 
     tz = h["tz_points"]
-    tz_s = (f"Unchecked, the time zone defect alone moves on-time performance by {abs(tz):.1f} points "
-            f"({'up' if tz > 0 else 'down'}), from {pct(h['dq_truth'])} to {pct(h['dq_tz_only'])}.")
+    tz_s = (f"Left unchecked, the time zone error alone moves on-time performance {'up' if tz > 0 else 'down'} "
+            f"{abs(tz):.1f} percentage points, from {pct(h['dq_truth'])} to {pct(h['dq_tz_only'])}.")
 
-    catch = (f"Expediting the riskiest {round(100 * h['expedite_share'])}% of AWBs at arrival would reach "
-             f"{pct(h['model_catch'], 0)} of the shipments that end up late.")
+    catch = (f"Flagging the riskiest {round(100 * h['expedite_share'])}% of shipments when their plane lands would "
+             f"catch {pct(h['model_catch'], 0)} of the shipments that end up late.")
 
     gap = h["drift_pred"] - h["drift_actual"]
-    drift = (f"The risk model trained on normal months predicts a {pct(h['drift_pred'])} late rate on the bunched "
-             f"arrivals; the actual rate is {pct(h['drift_actual'])}. Its AUC moves from {h['drift_auc_base']:.3f} to "
-             f"{h['drift_auc']:.3f}.")
+    auc_drop = h["drift_auc_base"] - h["drift_auc"]
+    rank = (f"It still puts the riskiest shipments first almost as well as before (ranking accuracy {h['drift_auc_base']:.3f} "
+            f"on the normal timetable, {h['drift_auc']:.3f} here), so its order holds but its odds need updating."
+            if auc_drop < 0.01 else
+            f"Its ranking slips too: accuracy falls from {h['drift_auc_base']:.3f} to {h['drift_auc']:.3f}.")
+    drift = (f"The early-warning model, trained on normal months, expects {pct(h['drift_pred'])} of shipments to be late "
+             f"on the bunched schedule; in fact {pct(h['drift_actual'])} are. {rank}")
     fx = C.load()["flex"]
-    pool = (f"a call-in pool of {fx['pool_size']} staff, called when more than {fx['backlog_trigger']} AWBs wait for "
-            f"breakdown")
+    pool = (f"a team of {fx['pool_size']} on-call staff, called in whenever {fx['backlog_trigger']} or more shipments "
+            f"are waiting to be unpacked")
     if h["dis_flex"] > max(h["dis_replanned"], h["dis_static"]):
-        flex = (f"Keeping the normal-timetable roster and adding {pool}, does better still: {pct(h['dis_flex'])} on time "
-                f"for {h['dis_flex_hours_week']:,.0f} call-in hours a week.")
+        flex = (f"Keeping the recommended roster and adding {pool}, does better still: {pct(h['dis_flex'])} on time "
+                f"for {h['dis_flex_hours_week']:,.0f} on-call hours a week.")
     else:
-        flex = (f"Keeping the normal-timetable roster and adding {pool}, reaches {pct(h['dis_flex'])} on time for "
-                f"{h['dis_flex_hours_week']:,.0f} call-in hours a week.")
-    roster = (f"On the normal timetable, the optimized roster delivers {pct(h['opt_on_time'])} on time against "
-              f"{pct(h['legacy_on_time'])} for the legacy roster, with {h['opt_hours_week']:,.0f} staff hours a week "
-              f"against {h['legacy_hours_week']:,.0f}.")
+        flex = (f"Keeping the recommended roster and adding {pool}, reaches {pct(h['dis_flex'])} on time for "
+                f"{h['dis_flex_hours_week']:,.0f} on-call hours a week.")
+    roster = (f"On the normal timetable, a recommended roster gets {pct(h['opt_on_time'])} of shipments ready on time "
+              f"against {pct(h['legacy_on_time'])} for the current roster, with {h['opt_hours_week']:,.0f} staff hours "
+              f"a week instead of {h['legacy_hours_week']:,.0f}.")
     return {"headline": headline, "flex": flex, "volume": volume, "timezone": tz_s, "catch": catch, "drift": drift,
             "roster": roster, "drift_direction": "over" if gap > 0 else "under"}
 

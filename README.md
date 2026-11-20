@@ -4,11 +4,16 @@ Defining the measures, cleaning the data, predicting late freight, and staffing 
 
 **Live app: [cargo-ops-lab.streamlit.app](https://cargo-ops-lab.streamlit.app/)**. Synthetic terminal. Illustrative only.
 
+Written so that a reader with no cargo or data background can follow it. The overview tells the story of one late
+shipment, chapter by chapter. Every page then opens with the short version in plain English (the question, the answer
+and why it matters), and the SQL, the scores and the math follow under the hood. A Legal desk looks up any shipment's
+record and tests contract promises, and an Ask the lab chat answers questions in plain words.
+
 At an import cargo terminal, which shipments will miss their promised ready time, how many staff does each shift need
 to stop that, and what happens to the plan when the flight schedule breaks? This lab answers on a simulated terminal
 at a Gulf hub: 230,796 air waybills (AWBs) and 65,139 tonnes landed between April 2025 and the
-data cut-off on 30 September 2026. On the normal timetable, the optimized roster delivers 94.6% on time against 91.9% for the legacy roster, with 1,354 staff hours a week against 1,456. When 40% of arrivals bunch into waves, the roster built on the normal timetable delivers 85.1% on time. Re-planning from the live schedule gets back to 91.0% for 104 more staff hours a week. Keeping the normal-timetable roster and adding a call-in pool of 4 staff, called when more than 60 AWBs wait for breakdown, does better still: 93.7% on time for 96 call-in hours a week.
-Even with 20% less freight, on-time performance under the normal-timetable roster falls from 94.6% to 93.8% once 40% of flights bunch into waves.
+data cut-off on 30 September 2026. On the normal timetable, a recommended roster gets 94.6% of shipments ready on time against 91.9% for the current roster, with 1,354 staff hours a week instead of 1,456. When 40% of flights are squeezed into two daily rush hours, the roster built for the normal timetable gets 85.1% of shipments ready on time. Re-planning the roster for the new schedule brings it back to 91.0% for 104 more staff hours a week. Keeping the recommended roster and adding a team of 4 on-call staff, called in whenever 60 or more shipments are waiting to be unpacked, does better still: 93.7% on time for 96 on-call hours a week.
+Even with 20% less freight, the recommended roster falls from 94.6% to 93.8% on time once 40% of flights bunch into rush hours.
 
 ![When the Schedule Breaks, with 40% of flights moved into waves and the re-planned policy selected](assets/screenshots/disruption_waves_1280.webp)
 
@@ -22,23 +27,24 @@ Every figure below is read from `data/headline.json`, which the build writes fro
 | How long does the terminal take? | Median 1.9 hours from arrival to ready; the slowest tenth over 4.8 hours |
 | Whose clock is the dwell on? | The handler holds 15.5% of the time between arrival and delivery; the customer the rest |
 | What does dirty data do? | Taken as received, the feed reads 92.0% on time against a true 93.5%; after repair and quarantine, 93.3% |
-| The time zone gotcha alone | Unchecked, the time zone defect alone moves on-time performance by 0.6 points (down), from 93.5% to 92.9%. |
-| Can lateness be predicted at arrival? | Gradient boosting: AUC 0.960 on the test months. Expediting the riskiest 10% of AWBs at arrival would reach 77% of the shipments that end up late. |
-| How many hands per shift? | Optimized roster: 94.6% on time on 1,354 staff hours a week, against 91.9% on 1,456 for the legacy roster |
-| When flights bunch into waves (40% moved) | Normal-timetable roster 85.1%, re-planned 91.0%, normal-timetable roster plus a call-in pool 93.7%, legacy 82.8% |
-| Does the risk model hold? | The risk model trained on normal months predicts a 14.3% late rate on the bunched arrivals; the actual rate is 16.9%. Its AUC moves from 0.959 to 0.954. |
+| The time zone gotcha alone | Left unchecked, the time zone error alone moves on-time performance down 0.6 percentage points, from 93.5% to 92.9%. |
+| Can lateness be predicted at arrival? | Gradient boosting: AUC 0.960 on the test months. Flagging the riskiest 10% of shipments when their plane lands would catch 77% of the shipments that end up late. |
+| How many people per shift? | Recommended (optimized) roster: 94.6% on time on 1,354 staff hours a week, against 91.9% on 1,456 for the current (legacy) roster |
+| When flights bunch into rush hours (40% moved) | Recommended roster 85.1%, re-planned 91.0%, recommended plus on-call staff 93.7%, current roster 82.8% |
+| Does the risk model hold? | The early-warning model, trained on normal months, expects 14.3% of shipments to be late on the bunched schedule; in fact 16.9% are. It still puts the riskiest shipments first almost as well as before (ranking accuracy 0.959 on the normal timetable, 0.954 here), so its order holds but its odds need updating. |
 
 ## Screenshots
 
 | | |
 |---|---|
-| ![Terminal](assets/screenshots/terminal_1280.webp) **Terminal**: the synthetic terminal, the two clocks, the four numbers that matter | ![KPIs](assets/screenshots/kpis_1280.webp) **KPIs**: the KPI dictionary, live filters, on time by hour and weekday, handler against customer time |
-| ![Data Quality](assets/screenshots/dq_1280.webp) **Data Quality**: a rule per defect, precision and recall against the injected truth, the KPI under four versions of the data | ![Risk](assets/screenshots/risk_1280.webp) **Risk**: what the model may use, calibration, the expedite slider, what drives the score |
-| ![Roster](assets/screenshots/roster_1280.webp) **Roster**: legacy against optimized, service and cost, the frontier, the integer program | ![Disruption](assets/screenshots/disruption_1280.webp) **Disruption**: four policies against the same broken schedule, and the model's drift |
-| ![Methods](assets/screenshots/methods_1280.webp) **Methods**: every assumption with its reason, method choices, limits and tests | ![Phone](assets/screenshots/disruption_390.webp) **On a phone** |
+| ![Overview](assets/screenshots/terminal_1280.webp) **Overview**: the terminal in one minute, the story of one late shipment, five questions with their answers | ![Measures](assets/screenshots/kpis_1280.webp) **Measures**: the KPI dictionary in plain words, live filters, on time by hour and weekday, terminal against customer time |
+| ![Data checks](assets/screenshots/dq_1280.webp) **Data checks**: a check per planted error, how much each catches, the headline under five versions of the records | ![Early warning](assets/screenshots/risk_1280.webp) **Early warning**: the fast-track slider, what the model may use, what makes a shipment risky, calibration |
+| ![Staffing](assets/screenshots/roster_1280.webp) **Staffing**: current against recommended, service and cost, what extra hours buy, the integer program | ![Disruption](assets/screenshots/disruption_1280.webp) **Disruption**: four staffing responses to the same broken schedule, and the model's drift |
+| ![Legal desk](assets/screenshots/legal_1280.webp) **Legal desk**: a plain shipment file to download, a contract promise tester, lateness caused by the disruption alone | ![Ask the lab](assets/screenshots/ask_1280.webp) **Ask the lab**: questions in plain words, answered from the stored results |
+| ![Methods](assets/screenshots/methods_1280.webp) **Methods**: the glossary, every assumption with its reason, method choices, limits and tests | ![Phone](assets/screenshots/disruption_390.webp) **On a phone** |
 
-A 60 to 90 second walk-through (Terminal, then Disruption: moving 40% of flights into waves and switching from the
-static to the re-planned roster) goes here: `assets/screenshots/walkthrough.gif`.
+A 60 to 90 second walk-through (the story on the Overview, then Disruption: moving 40% of flights into rush hours and
+switching from the recommended to the re-planned roster) goes here: `assets/screenshots/walkthrough.gif`.
 
 ## Context
 
@@ -117,12 +123,19 @@ Deployed on Streamlit Community Cloud with Python 3.12. Community Cloud's docume
 subject to change) are about 2 CPU cores and 2.7 GB of memory at most; apps without traffic for 12 hours go to sleep
 and wake on the next visit.
 
+Ask the lab works without any key: it matches questions to answers written from the stored results. To have Claude
+answer instead, held to the same facts, add `ANTHROPIC_API_KEY = "..."` to the app's secrets (Community Cloud: the
+app's Settings, then Secrets; locally: `.streamlit/secrets.toml`, which is never committed). It uses Claude Opus 5.5
+at low effort, caps each visit at 20 questions, and `CHAT_MODEL = "..."` in the secrets picks another model. Every
+question then goes to the Anthropic API and is billed to that key.
+
 ## Repository
 
 ```
 app.py                  entry point and navigation
-pages/                  one file per page
-lab/                    config, schedule, SimPy terminal, defects, KPIs, model, roster, disruption, UI
+pages/                  one file per page, nine in all
+lab/                    config, schedule, SimPy terminal, defects, KPIs, model, roster, disruption, UI,
+                        shipments (the record lookup), ask (the chat)
 sql/                    kpis.sql, dq_rules.sql, features.sql
 scripts/                build_results.py, capture.py
 config.yml              every assumption, one comment each

@@ -75,6 +75,7 @@ def main() -> None:
                 overflow = page.evaluate("() => document.documentElement.scrollWidth > window.innerWidth + 1")
                 h = page.evaluate("() => { const m = document.querySelector('[data-testid=\"stMain\"]');"
                                   " return Math.max(m ? m.scrollHeight : 0, document.body.scrollHeight); }")
+                h = h if h > 200 else 1600  # a chat page scrolls inside its own container
                 page.set_viewport_size({"width": width, "height": min(int(h) + 40, 20000)})
                 time.sleep(1.5)
                 path = out / f"{pg['key']}_{width}.webp"

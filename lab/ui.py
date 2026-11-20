@@ -20,7 +20,8 @@ import streamlit as st
 from lab import config as C
 
 APP = "Cargo Ops Lab"
-TAGLINE = "Will the freight be ready on time, and how many hands does the floor need to make sure it is?"
+TAGLINE = ("When a plane lands with cargo, how often is the freight ready for the customer on time, and how many "
+           "people does each shift need to make sure it is?")
 SYNTHETIC = "Synthetic terminal. Illustrative only."
 PORTFOLIO = "https://maidenpeter.github.io/"
 REPO = "https://github.com/maidenpeter/cargo-ops-lab"
@@ -38,28 +39,31 @@ HATCH = "rgba(10,20,32,.30)"
 SERIF = "'EB Garamond', Garamond, Georgia, serif"
 UI = "'IBM Plex Sans Condensed', 'Arial Narrow', Arial, sans-serif"
 
+# "q" is the plain question each page answers; the overview lists them in order
 PAGES = [
-    {"key": "terminal", "file": "pages/1_Terminal.py", "nav": "Terminal", "url": "terminal", "icon": ":material/flight_land:",
-     "num": "", "eyebrow": "Import cargo terminal", "title": APP,
-     "teaser": "What the synthetic terminal is, and the four numbers that matter."},
-    {"key": "kpis", "file": "pages/2_KPIs.py", "nav": "KPIs", "url": "kpis", "icon": ":material/monitoring:",
-     "num": "I", "eyebrow": "Performance measures", "title": "What counts as on time",
-     "teaser": "A KPI dictionary on cargo milestones, with the terminal's clock split from the customer's."},
-    {"key": "dq", "file": "pages/3_Data_Quality.py", "nav": "Data Quality", "url": "data-quality", "icon": ":material/rule:",
-     "num": "II", "eyebrow": "Data quality", "title": "Check the feed before you believe it",
-     "teaser": "Six defects injected at known rates, a rule for each, and what dirty data does to the headline KPI."},
-    {"key": "risk", "file": "pages/4_Risk.py", "nav": "Risk", "url": "risk", "icon": ":material/crisis_alert:",
-     "num": "III", "eyebrow": "Predictive", "title": "Which shipments will be late",
-     "teaser": "A late-risk score at aircraft arrival, and what expediting the riskiest tenth would catch."},
-    {"key": "roster", "file": "pages/5_Roster.py", "nav": "Roster", "url": "roster", "icon": ":material/groups:",
-     "num": "IV", "eyebrow": "Prescriptive", "title": "How many hands each shift needs",
-     "teaser": "A roster chosen by optimization over a simulation, labor cost against late shipments."},
+    {"key": "terminal", "file": "pages/1_Terminal.py", "nav": "Overview", "url": "terminal", "icon": ":material/flight_land:",
+     "num": "", "eyebrow": "A simulated airport cargo terminal", "title": APP, "q": ""},
+    {"key": "kpis", "file": "pages/2_KPIs.py", "nav": "Measures", "url": "kpis", "icon": ":material/monitoring:",
+     "num": "I", "eyebrow": "Measures", "title": "What counts as on time",
+     "q": "How often is the freight ready on time?"},
+    {"key": "dq", "file": "pages/3_Data_Quality.py", "nav": "Data checks", "url": "data-quality", "icon": ":material/rule:",
+     "num": "II", "eyebrow": "Data checks", "title": "Check the records before you believe them",
+     "q": "Can the records be trusted as they arrive?"},
+    {"key": "risk", "file": "pages/4_Risk.py", "nav": "Early warning", "url": "risk", "icon": ":material/crisis_alert:",
+     "num": "III", "eyebrow": "Early warning", "title": "Which shipments will be late",
+     "q": "Can late shipments be spotted the moment the plane lands?"},
+    {"key": "roster", "file": "pages/5_Roster.py", "nav": "Staffing", "url": "roster", "icon": ":material/groups:",
+     "num": "IV", "eyebrow": "Staffing", "title": "How many people each shift needs",
+     "q": "How many people should work each shift?"},
     {"key": "disruption", "file": "pages/6_Disruption.py", "nav": "Disruption", "url": "disruption", "icon": ":material/thunderstorm:",
      "num": "V", "eyebrow": "The twist", "title": "When the Schedule Breaks",
-     "teaser": "Flights bunch into waves and volume drops. How far the plan and the model drift, and what re-planning recovers."},
+     "q": "What happens when the flight schedule suddenly changes?"},
+    {"key": "legal", "file": "pages/8_Legal.py", "nav": "Legal desk", "url": "legal", "icon": ":material/gavel:",
+     "num": "", "eyebrow": "For the legal team", "title": "Was the terminal at fault?", "q": ""},
+    {"key": "ask", "file": "pages/9_Ask.py", "nav": "Ask the lab", "url": "ask", "icon": ":material/forum:",
+     "num": "", "eyebrow": "Questions in plain words", "title": "Ask the lab", "q": ""},
     {"key": "methods", "file": "pages/7_Methods.py", "nav": "Methods", "url": "methods", "icon": ":material/menu_book:",
-     "num": "", "eyebrow": "Appendix", "title": "Methods and assumptions",
-     "teaser": "Every assumption with its reason, the method choices, the limits, and the test results."},
+     "num": "", "eyebrow": "Appendix", "title": "Methods, assumptions and glossary", "q": ""},
 ]
 PAGE = {p["key"]: p for p in PAGES}
 
@@ -188,8 +192,10 @@ img[data-testid="stHeaderLogo"] {{ height:2.9rem !important; max-height:2.9rem !
   font-family:var(--display-sc); font-size:1.5rem; line-height:1.05; letter-spacing:.02em; color:var(--ink); white-space:nowrap; }}
 :is([data-testid="stLogoLink"], div:has(> img.stLogo))::before {{ content:"by Marion Peter"; grid-column:2; grid-row:2;
   align-self:start; font-family:var(--script); font-size:1.15rem; line-height:1.15; color:var(--accent); white-space:nowrap; }}
-a[data-testid="stTopNavLink"] {{ border-radius:2px; padding:0 .55rem !important; gap:.35rem; color:var(--ink-2) !important; }}
-a[data-testid="stTopNavLink"] p {{ color:inherit !important; font-family:var(--ui); font-size:.95rem; }}
+a[data-testid="stTopNavLink"] {{ border-radius:2px; padding:0 .42rem !important; gap:.3rem; color:var(--ink-2) !important; }}
+a[data-testid="stTopNavLink"] p {{ color:inherit !important; font-family:var(--ui); font-size:.93rem; }}
+/* nine pages: below a wide screen the icons go, so every page name stays in the bar */
+@media (max-width:1500px) {{ a[data-testid="stTopNavLink"] > span:has([data-testid="stIconMaterial"]) {{ display:none; }} }}
 a[data-testid="stTopNavLink"] [data-testid="stIconMaterial"] {{ font-size:1.05rem !important; color:var(--accent) !important; opacity:.8; }}
 a[data-testid="stTopNavLink"]:hover {{ color:var(--ink) !important; background:var(--accent-soft) !important; }}
 a[data-testid="stTopNavLink"][aria-current="page"] {{ color:var(--ink) !important; background:transparent !important;
@@ -315,6 +321,72 @@ table.ledger.doc th, table.ledger.doc td {{ text-align:left; white-space:normal;
 table.ledger.doc td:first-child {{ font-family:var(--serif); font-size:1.05rem; white-space:nowrap; }}
 .scroll {{ overflow-x:auto; max-width:100%; -webkit-overflow-scrolling:touch; }}
 
+/* the short version: question, answer and why it matters, at the top of every page */
+.short {{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr); gap:1px; background:var(--rule);
+  border:1px solid var(--rule-strong); outline:1px solid var(--rule); outline-offset:-6px; border-radius:2px;
+  margin:.6rem 0 1.4rem 0; }}
+.short > div {{ background:var(--surface); padding:1.1rem 1.3rem 1.2rem 1.3rem; min-width:0; }}
+.short .k {{ display:block; font-family:var(--label); font-size:.72rem; letter-spacing:.15em; text-transform:uppercase;
+  color:var(--muted); margin-bottom:.45rem; }}
+.stMarkdown .short p {{ font-family:var(--serif); font-size:1.1rem; line-height:1.5; color:var(--ink-2); margin:0; }}
+.short > div.a {{ background:color-mix(in srgb, var(--accent) 6%, var(--surface)); }}
+.short .a .k {{ color:var(--accent); }}
+.stMarkdown .short .a p {{ font-size:1.24rem; line-height:1.45; color:var(--ink); }}
+.short b {{ font-weight:500; color:var(--accent); font-variant-numeric:tabular-nums lining-nums; }}
+@media (max-width:900px) {{ .short {{ grid-template-columns:minmax(0,1fr); }} }}
+
+/* under the hood: where the analyst detail starts */
+.hood {{ position:relative; margin:3.2rem 0 1rem 0; padding:1.1rem 0 0 0; border-top:1px dashed var(--rule-strong); max-width:74ch; }}
+.hood .k {{ font-family:var(--label); font-size:.75rem; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); }}
+.hood h2 {{ margin:.25rem 0 .35rem 0 !important; padding:0 !important; }}
+.hood p {{ font-family:var(--serif); font-size:1.08rem; line-height:1.5; color:var(--ink-2); margin:0; }}
+
+/* five questions, five answers on the overview */
+.findings {{ border-top:3px double var(--rule-strong); margin:.5rem 0 .4rem 0; }}
+a.finding {{ display:grid; grid-template-columns:3.4rem minmax(0,1fr) minmax(0,1.35fr); gap:.5rem 1.6rem; align-items:start;
+  padding:1.25rem .8rem 1.3rem .6rem; border-bottom:1px solid var(--rule); text-decoration:none !important;
+  color:var(--ink) !important; transition:background-color .2s; }}
+a.finding:hover {{ background:var(--accent-soft); }}
+.finding .pn {{ font-family:var(--display); font-size:2.4rem; line-height:.95; color:var(--accent); }}
+.finding .pe {{ display:block; font-family:var(--label); font-size:.7rem; letter-spacing:.15em; text-transform:uppercase;
+  color:var(--muted); margin-bottom:.35rem; }}
+.finding .q {{ display:block; font-family:var(--display); font-size:clamp(1.35rem,2.1vw,1.6rem); line-height:1.15; color:var(--ink); }}
+.finding .v {{ display:block; font-family:var(--serif); font-size:clamp(2rem,3.2vw,2.6rem); line-height:1;
+  font-variant-numeric:tabular-nums lining-nums; color:var(--ink); }}
+.finding .v.gain {{ color:var(--gain-ink); }} .finding .v.loss {{ color:var(--loss-ink); }} .finding .v.gold {{ color:var(--accent); }}
+.finding .s {{ display:block; font-family:var(--serif); font-size:1.1rem; line-height:1.5; color:var(--ink-2); margin-top:.45rem; }}
+.finding .go {{ display:block; font-family:var(--label); font-size:.74rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); margin-top:.6rem; }}
+a.finding:hover .go {{ text-decoration:underline; }}
+@media (max-width:760px) {{ a.finding {{ grid-template-columns:2.4rem minmax(0,1fr); }} .finding .ans {{ grid-column:2; }}
+  .finding .pn {{ font-size:2rem; }} }}
+
+/* the story on the overview: one chapter at a time, over the shipment's own timeline */
+.story {{ max-width:70ch; min-height:8.4rem; }}
+.story .dots {{ display:flex; align-items:center; gap:.4rem; margin:.2rem 0 .6rem 0; }}
+.story .dots i {{ width:22px; height:3px; background:var(--rule-strong); display:block; }}
+.story .dots i.on {{ background:var(--accent); }}
+.story .dots span {{ font-family:var(--label); font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--muted); margin-left:.5rem; }}
+.story h3 {{ font-family:var(--display) !important; font-size:clamp(1.5rem,2.4vw,1.85rem) !important; margin:0 0 .4rem 0 !important;
+  padding:0 !important; }}
+.stMarkdown .story p {{ font-family:var(--serif); font-size:clamp(1.12rem,1.6vw,1.26rem); line-height:1.55; color:var(--ink);
+  margin:0; }}
+.story-line {{ margin:.6rem 0 .4rem 0; }}
+.story-line svg {{ width:100%; height:auto; display:block; overflow:visible; }}
+@media (max-width:640px) {{ .story-line {{ overflow-x:auto; }} .story-line svg {{ min-width:640px; }} }}
+
+/* glossary, and the plain legend of the staffing responses */
+.gloss {{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:0 2rem; margin:.3rem 0 .8rem 0; }}
+.gloss.four {{ grid-template-columns:repeat(4, minmax(0,1fr)); gap:0 1.4rem; }}
+.gloss > div {{ border-top:1px solid var(--rule); padding:.8rem 0 .9rem 0; min-width:0; }}
+.gloss b {{ font-family:var(--serif); font-weight:500; font-size:1.16rem; color:var(--ink); }}
+.gloss .aka {{ font-family:var(--ui); font-size:.85rem; color:var(--muted); margin-left:.45rem; }}
+.gloss .sw {{ display:inline-block; width:10px; height:10px; margin-right:.5rem; vertical-align:.05rem; }}
+.stMarkdown .gloss p {{ font-family:var(--ui); font-size:.98rem; line-height:1.5; color:var(--ink-2); margin:.3rem 0 0 0; }}
+@media (max-width:1000px) {{ .gloss.four {{ grid-template-columns:repeat(2, minmax(0,1fr)); }} }}
+@media (max-width:640px) {{ .gloss {{ grid-template-columns:minmax(0,1fr); }} }}
+
 /* footer */
 .site-foot {{ border-top:3px double var(--rule-strong); margin-top:3rem; padding-top:1rem; display:flex; flex-wrap:wrap;
   gap:.4rem 1.6rem; justify-content:space-between; font-family:var(--ui); font-size:.9rem; color:var(--muted); }}
@@ -407,6 +479,74 @@ def show_sql(sql: str, label: str = "Show the SQL") -> None:
         st.code(sql, language="sql")
 
 
+def short(question: str, answer: str, why: str) -> None:
+    """The short version, for a reader with no cargo or data background: the question, the answer, why it matters."""
+    st.markdown(f'<div class="short"><div><span class="k">The question</span><p>{question}</p></div>'
+                f'<div class="a"><span class="k">The answer</span><p>{answer}</p></div>'
+                f'<div><span class="k">Why it matters</span><p>{why}</p></div></div>', unsafe_allow_html=True)
+
+
+def hood(intro: str) -> None:
+    """Marks where the plain story ends and the analyst detail (SQL, scores, math) begins."""
+    st.markdown(f'<div class="hood"><span class="k">Under the hood</span><h2>For analysts</h2><p>{intro}</p></div>',
+                unsafe_allow_html=True)
+
+
+def in100(x: float) -> str:
+    """A rate as a count out of a hundred, which reads more easily than a percentage."""
+    return f"{round(100 * x)} in 100"
+
+
+def glossary_terms() -> list[tuple[str, str, str]]:
+    """Plain definitions of the words the lab uses: (term, the industry or technical name, definition)."""
+    cfg = C.load()
+    sla = cfg["sla_hours"]
+    lo = min(sla, key=sla.get)
+    top = " and ".join(PRODUCT_NOUNS[p] for p in sla if sla[p] == max(sla.values()))
+    sh = cfg["shifts"]
+    times = ", ".join(f"{n.lower()} {s:02d}:00 to {(s + sh['hours']) % 24:02d}:00" for n, s in zip(sh["names"], sh["starts"]))
+    fx = cfg["flex"]
+    waves = " and ".join(cfg["disruption"]["wave_centers"])
+    return [
+        ("Shipment", "air waybill, AWB", "One customer's consignment, with its own paperwork number. The lab counts shipments."),
+        ("Ready to collect", "NFD, notified for delivery", "The moment the terminal tells the customer the freight can be "
+         "picked up. The terminal's promise ends here."),
+        ("The promise", "service level, SLA", f"How many hours the terminal has from landing to ready, set by type of cargo: "
+         f"{sla[lo]} hours for {PRODUCT_NOUNS[lo]} up to {max(sla.values())} for {top}. "
+         f"The hours are illustrative."),
+        ("On time", None, "Ready to collect within the promise, counted from the moment the plane lands."),
+        ("Container", "ULD, unit load device", "The metal box or pallet freight flies in. Some go to one customer unopened; "
+         "the rest have to be unpacked."),
+        ("Unpacking", "breakdown", "Taking freight out of a container so it can be checked and stored. This is the work the "
+         "shift crew does, so it is where staff numbers matter."),
+        ("Queue", "backlog", "Shipments that have landed and are still waiting to be unpacked."),
+        ("Roster", None, f"How many people work each shift on each day of the week. Shifts run {times}, hub local time."),
+        ("Percentage point", None, "The gap between two percentages. Going from 85% to 91% is a rise of 6 points."),
+        ("Simulation", None, "A computer model that plays out every flight and shipment minute by minute, so different "
+         "rosters can be tried on exactly the same freight."),
+        ("Synthetic", None, "Made by the simulation, not taken from any real terminal. Every number here is illustrative."),
+        ("Carrier", None, "An airline. The lab's carriers are labeled A to T."),
+        ("Early-warning model", "risk model", "A formula that learned from past shipments how likely a new one is to be "
+         "late, using only what is known when its plane lands."),
+        ("Ranking accuracy", "AUC", "The chance the model scores a late shipment above one that turns out on time. 0.5 is a "
+         "coin toss and 1 is perfect."),
+        ("Set aside", "quarantine", "Records held back from every measure because they cannot be trusted or safely fixed."),
+        ("Optimizer", "integer program", "A method that searches every allowed combination of staff numbers and picks the "
+         "one with the lowest total of wages and late penalties."),
+        ("Rush hour", "arrival wave", f"In the disruption scenarios, flights moved to land close together around {waves}."),
+        ("On-call staff", "call-in pool", f"A team of {fx['pool_size']} extra people, called in for {fx['block_hours']} "
+         f"hours whenever {fx['backlog_trigger']} or more shipments are waiting to be unpacked. They arrive "
+         f"{fx['lead_time_min']} minutes after the call and are paid {fx['cost_multiplier']:g} times the hourly rate."),
+    ]
+
+
+def glossary(terms: list[tuple[str, str, str]] | None = None) -> None:
+    terms = terms if terms is not None else glossary_terms()
+    cells = "".join(f'<div><b>{esc(t)}</b>{f"<span class={chr(34)}aka{chr(34)}>{esc(a)}</span>" if a else ""}'
+                    f'<p>{esc(d)}</p></div>' for t, a, d in terms)
+    st.markdown(f'<div class="gloss">{cells}</div>', unsafe_allow_html=True)
+
+
 def footer() -> None:
     sib = "".join(f'<a href="{u}" target="_blank">{esc(n)}</a>' for n, u in SIBLINGS)
     st.markdown(
@@ -457,4 +597,17 @@ WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 SHIFTS = C.load()["shifts"]["names"]
 PRODUCT_LABELS = {"general": "General", "express": "Express", "perishable": "Perishable", "pharma": "Pharma",
                   "dangerous_goods": "Dangerous goods", "live_animals": "Live animals"}
-HU_LABELS = {"bup_breakdown": "Built-up ULD, broken down", "bup_intact": "Built-up ULD, intact", "loose": "Loose"}
+PRODUCT_NOUNS = {"general": "general freight", "express": "express freight", "perishable": "perishable goods",
+                 "pharma": "medicines", "dangerous_goods": "dangerous goods", "live_animals": "live animals"}
+HU_LABELS = {"bup_breakdown": "Container, unpacked here", "bup_intact": "Container, passed on unopened", "loose": "Loose pieces"}
+# the risk model's inputs in everyday words
+FEATURE_LABELS = {
+    "product": "Type of cargo", "handling_unit": "Container or loose", "carrier": "Airline", "flight_type": "Passenger plane or freighter",
+    "region": "Where it flew from", "pieces": "Number of pieces", "weight_kg": "Weight", "arr_hour": "Hour of landing",
+    "arr_weekday": "Day of the week", "delay_min": "How late the plane landed", "rostered_headcount": "Staff scheduled on the shift",
+    "backlog_at_arr": "Queue waiting when it lands", "sched_awbs_next_2h": "Shipments due in the next 2 hours",
+}
+# the four staffing responses on the disruption page
+POLICY_NAMES = {"legacy": "Current roster", "static": "Recommended roster", "replanned": "Re-planned roster",
+                "flex": "Recommended plus on-call staff"}
+POLICY_SHORT = {"legacy": "Current", "static": "Recommended", "replanned": "Re-planned", "flex": "On-call"}

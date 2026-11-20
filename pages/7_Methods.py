@@ -5,9 +5,13 @@ from lab import config as C
 from lab import ui
 
 cfg = C.load()
-ui.page("methods", lede="Every assumption with its reason, the method choices and why, what the lab leaves out, and the "
-                        "tests that guard it. Every number in the config is an illustrative assumption, not an industry "
-                        "standard.")
+ui.page("methods", lede="The words the lab uses, every assumption with its reason, the method choices and why, what the "
+                        "lab leaves out, and the tests that guard it. Every number in the settings is an illustrative "
+                        "assumption, not an industry standard.")
+
+# ---------------------------------------------------------------- glossary
+ui.section("Glossary", "Each word in plain English, with the industry or technical name beside it where there is one.")
+ui.glossary()
 
 # ---------------------------------------------------------------- assumptions
 ui.section("Every assumption", "Read straight from config.yml, with the one-line comment each value carries.")

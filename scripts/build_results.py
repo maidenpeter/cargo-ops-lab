@@ -246,11 +246,12 @@ def kpi_tables(con, sh: pd.DataFrame, comp: dict):
         save(v, k)
     kd = kpis.dictionary()
     kd.to_csv(C.DATA / "kpi_dictionary.csv", index=False)
-    awb = con.execute("""SELECT carrier, flight_type, region, product, handling_unit, pieces, weight_kg,
-                                arr_ts, rcf_ts, nfd_ts, dlv_ts FROM awb ORDER BY arr_ts""").df()
-    for c in ["carrier", "flight_type", "region", "product", "handling_unit"]:
+    # what the app's live filters and the shipment lookup query; the full cleaned table is rebuilt from the logs
+    awb = con.execute("""SELECT awb_id, flight, carrier, flight_type, region, product, handling_unit, pieces, weight_kg,
+                                sched_arr, arr_ts, rcf_ts, nfd_ts, dlv_ts FROM awb ORDER BY arr_ts, awb_id""").df()
+    for c in ["flight", "carrier", "flight_type", "region", "product", "handling_unit"]:
         awb[c] = awb[c].astype("category")
-    save(awb, "awb_clean")  # what the app's live filters query; the full cleaned table is rebuilt from the logs
+    save(awb, "awb_clean")
     save(sh, "shift_log")
     log(f"KPIs: on time {ot['value']:.4f}, handler p90 {ht['p90_h']:.2f} h")
 

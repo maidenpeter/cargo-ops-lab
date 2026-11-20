@@ -6,3 +6,4 @@ pyarrow==26.0.1
 numpy==2.5.5
 plotly==7.1.0
 PyYAML==6.0.3
+anthropic==2.10.0    # used by Ask the lab only when ANTHROPIC_API_KEY is set in the app secrets

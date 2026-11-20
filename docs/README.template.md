@@ -4,6 +4,11 @@ Defining the measures, cleaning the data, predicting late freight, and staffing 
 
 **Live app: [cargo-ops-lab.streamlit.app](https://cargo-ops-lab.streamlit.app/)**. Synthetic terminal. Illustrative only.
 
+Written so that a reader with no cargo or data background can follow it. The overview tells the story of one late
+shipment, chapter by chapter. Every page then opens with the short version in plain English (the question, the answer
+and why it matters), and the SQL, the scores and the math follow under the hood. A Legal desk looks up any shipment's
+record and tests contract promises, and an Ask the lab chat answers questions in plain words.
+
 At an import cargo terminal, which shipments will miss their promised ready time, how many staff does each shift need
 to stop that, and what happens to the plan when the flight schedule breaks? This lab answers on a simulated terminal
 at a Gulf hub: {{awbs_total|num}} air waybills (AWBs) and {{tonnes_total|num}} tonnes landed between April 2025 and the
@@ -24,21 +29,22 @@ Every figure below is read from `data/headline.json`, which the build writes fro
 | What does dirty data do? | Taken as received, the feed reads {{dq_raw|pct}} on time against a true {{dq_truth|pct}}; after repair and quarantine, {{dq_repaired|pct}} |
 | The time zone gotcha alone | {{sentences.timezone|raw}} |
 | Can lateness be predicted at arrival? | {{model|raw}}: AUC {{model_auc|f3}} on the test months. {{sentences.catch|raw}} |
-| How many hands per shift? | Optimized roster: {{opt_on_time|pct}} on time on {{opt_hours_week|num}} staff hours a week, against {{legacy_on_time|pct}} on {{legacy_hours_week|num}} for the legacy roster |
-| When flights bunch into waves ({{dis_share|pct0}} moved) | Normal-timetable roster {{dis_static|pct}}, re-planned {{dis_replanned|pct}}, normal-timetable roster plus a call-in pool {{dis_flex|pct}}, legacy {{dis_legacy|pct}} |
+| How many people per shift? | Recommended (optimized) roster: {{opt_on_time|pct}} on time on {{opt_hours_week|num}} staff hours a week, against {{legacy_on_time|pct}} on {{legacy_hours_week|num}} for the current (legacy) roster |
+| When flights bunch into rush hours ({{dis_share|pct0}} moved) | Recommended roster {{dis_static|pct}}, re-planned {{dis_replanned|pct}}, recommended plus on-call staff {{dis_flex|pct}}, current roster {{dis_legacy|pct}} |
 | Does the risk model hold? | {{sentences.drift|raw}} |
 
 ## Screenshots
 
 | | |
 |---|---|
-| ![Terminal](assets/screenshots/terminal_1280.webp) **Terminal**: the synthetic terminal, the two clocks, the four numbers that matter | ![KPIs](assets/screenshots/kpis_1280.webp) **KPIs**: the KPI dictionary, live filters, on time by hour and weekday, handler against customer time |
-| ![Data Quality](assets/screenshots/dq_1280.webp) **Data Quality**: a rule per defect, precision and recall against the injected truth, the KPI under four versions of the data | ![Risk](assets/screenshots/risk_1280.webp) **Risk**: what the model may use, calibration, the expedite slider, what drives the score |
-| ![Roster](assets/screenshots/roster_1280.webp) **Roster**: legacy against optimized, service and cost, the frontier, the integer program | ![Disruption](assets/screenshots/disruption_1280.webp) **Disruption**: four policies against the same broken schedule, and the model's drift |
-| ![Methods](assets/screenshots/methods_1280.webp) **Methods**: every assumption with its reason, method choices, limits and tests | ![Phone](assets/screenshots/disruption_390.webp) **On a phone** |
+| ![Overview](assets/screenshots/terminal_1280.webp) **Overview**: the terminal in one minute, the story of one late shipment, five questions with their answers | ![Measures](assets/screenshots/kpis_1280.webp) **Measures**: the KPI dictionary in plain words, live filters, on time by hour and weekday, terminal against customer time |
+| ![Data checks](assets/screenshots/dq_1280.webp) **Data checks**: a check per planted error, how much each catches, the headline under five versions of the records | ![Early warning](assets/screenshots/risk_1280.webp) **Early warning**: the fast-track slider, what the model may use, what makes a shipment risky, calibration |
+| ![Staffing](assets/screenshots/roster_1280.webp) **Staffing**: current against recommended, service and cost, what extra hours buy, the integer program | ![Disruption](assets/screenshots/disruption_1280.webp) **Disruption**: four staffing responses to the same broken schedule, and the model's drift |
+| ![Legal desk](assets/screenshots/legal_1280.webp) **Legal desk**: a plain shipment file to download, a contract promise tester, lateness caused by the disruption alone | ![Ask the lab](assets/screenshots/ask_1280.webp) **Ask the lab**: questions in plain words, answered from the stored results |
+| ![Methods](assets/screenshots/methods_1280.webp) **Methods**: the glossary, every assumption with its reason, method choices, limits and tests | ![Phone](assets/screenshots/disruption_390.webp) **On a phone** |
 
-A 60 to 90 second walk-through (Terminal, then Disruption: moving 40% of flights into waves and switching from the
-static to the re-planned roster) goes here: `assets/screenshots/walkthrough.gif`.
+A 60 to 90 second walk-through (the story on the Overview, then Disruption: moving 40% of flights into rush hours and
+switching from the recommended to the re-planned roster) goes here: `assets/screenshots/walkthrough.gif`.
 
 ## Context
 
@@ -117,12 +123,19 @@ Deployed on Streamlit Community Cloud with Python 3.12. Community Cloud's docume
 subject to change) are about 2 CPU cores and 2.7 GB of memory at most; apps without traffic for 12 hours go to sleep
 and wake on the next visit.
 
+Ask the lab works without any key: it matches questions to answers written from the stored results. To have Claude
+answer instead, held to the same facts, add `ANTHROPIC_API_KEY = "..."` to the app's secrets (Community Cloud: the
+app's Settings, then Secrets; locally: `.streamlit/secrets.toml`, which is never committed). It uses Claude Opus 5.5
+at low effort, caps each visit at 20 questions, and `CHAT_MODEL = "..."` in the secrets picks another model. Every
+question then goes to the Anthropic API and is billed to that key.
+
 ## Repository
 
 ```
 app.py                  entry point and navigation
-pages/                  one file per page
-lab/                    config, schedule, SimPy terminal, defects, KPIs, model, roster, disruption, UI
+pages/                  one file per page, nine in all
+lab/                    config, schedule, SimPy terminal, defects, KPIs, model, roster, disruption, UI,
+                        shipments (the record lookup), ask (the chat)
 sql/                    kpis.sql, dq_rules.sql, features.sql
 scripts/                build_results.py, capture.py
 config.yml              every assumption, one comment each
