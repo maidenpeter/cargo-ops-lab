@@ -1,70 +1,129 @@
-# Cargo Ops Lab
+<p align="center">
+  <img src="assets/seal.svg" width="84" alt="">
+</p>
 
-Defining the measures, cleaning the data, predicting late freight, and staffing the floor to prevent it.
+<h1 align="center">Cargo Ops Lab</h1>
 
-**Live app: [cargo-ops-lab.streamlit.app](https://cargo-ops-lab.streamlit.app/)**. Synthetic terminal. Illustrative only.
+<p align="center">
+  <b>When a plane lands with cargo, how often is the freight ready on time,<br>
+  and how many people does each shift need to make sure it is?</b>
+</p>
 
-Written so that a reader with no cargo or data background can follow it. The overview tells the story of one late
-shipment, chapter by chapter. Every page then opens with the short version in plain English (the question, the answer
-and why it matters), and the SQL, the scores and the math follow under the hood. A Legal desk looks up any shipment's
-record and tests contract promises, and an Ask the lab chat answers questions in plain words.
+<p align="center">
+  <a href="https://cargo-ops-lab.streamlit.app/"><b>Open the live app</b></a>
+  &nbsp;&middot;&nbsp; <a href="#the-story">The story</a>
+  &nbsp;&middot;&nbsp; <a href="#five-questions-five-answers">Five answers</a>
+  &nbsp;&middot;&nbsp; <a href="#try-it">Try it</a>
+  &nbsp;&middot;&nbsp; <a href="#how-it-works">How it works</a>
+  &nbsp;&middot;&nbsp; <a href="#why-i-built-this">Why I built this</a>
+</p>
 
-At an import cargo terminal, which shipments will miss their promised ready time, how many staff does each shift need
-to stop that, and what happens to the plan when the flight schedule breaks? This lab answers on a simulated terminal
-at a Gulf hub: {{awbs_total|num}} air waybills (AWBs) and {{tonnes_total|num}} tonnes landed between April 2025 and the
-data cut-off on 30 September 2026. {{sentences.roster|raw}} {{sentences.headline|raw}} {{sentences.flex|raw}}
-{{sentences.volume|raw}}
+<p align="center"><sub>A portfolio project by Marion Peter. Synthetic terminal. Illustrative only.</sub></p>
 
-![When the Schedule Breaks, with 40% of flights moved into waves and the re-planned policy selected](assets/screenshots/disruption_waves_1280.webp)
+<p align="center">
+  <img src="assets/readme/story.webp" width="920" alt="The story on the app's overview: one late shipment of medicines, chapter by chapter, over its own timeline">
+</p>
 
-## The answer in numbers
+## In one minute
 
-Every figure below is read from `data/headline.json`, which the build writes from the stored results.
+Picture an airport cargo terminal at a busy Gulf hub. Planes land with freight on board. A crew tows the containers
+in, unpacks them, checks the paperwork and tells each customer that the goods are ready to collect. Every type of
+cargo carries a promise of how fast that happens, and a shipment that misses it is late.
 
-| Question | Answer |
-|---|---|
-| How often is freight ready within the promise? | {{nfd_on_time|pct}} of AWBs (NFD on time), cleaned data, legacy roster |
-| How long does the terminal take? | Median {{handler_p50_h|hrs}} from arrival to ready; the slowest tenth over {{handler_p90_h|hrs}} |
-| Whose clock is the dwell on? | The handler holds {{handler_share_of_dwell|pct}} of the time between arrival and delivery; the customer the rest |
-| What does dirty data do? | Taken as received, the feed reads {{dq_raw|pct}} on time against a true {{dq_truth|pct}}; after repair and quarantine, {{dq_repaired|pct}} |
-| The time zone gotcha alone | {{sentences.timezone|raw}} |
-| Can lateness be predicted at arrival? | {{model|raw}}: AUC {{model_auc|f3}} on the test months. {{sentences.catch|raw}} |
-| How many people per shift? | Recommended (optimized) roster: {{opt_on_time|pct}} on time on {{opt_hours_week|num}} staff hours a week, against {{legacy_on_time|pct}} on {{legacy_hours_week|num}} for the current (legacy) roster |
-| When flights bunch into rush hours ({{dis_share|pct0}} moved) | Recommended roster {{dis_static|pct}}, re-planned {{dis_replanned|pct}}, recommended plus on-call staff {{dis_flex|pct}}, current roster {{dis_legacy|pct}} |
-| Does the risk model hold? | {{sentences.drift|raw}} |
+This lab builds such a terminal on a computer and plays out 18 months of freight: {{awbs_total|num}} shipments
+weighing {{tonnes_total|num}} tonnes, landed between April 2025 and September 2026. Then it answers the questions a
+terminal's analyst would be asked, in words anyone can follow, with the analyst's working one click further down.
 
-## Screenshots
+> [!NOTE]
+> Everything here comes from one seeded simulation. No real terminal, airline, airport or system vendor is named:
+> airlines are Carrier A to Carrier T and origins are regions. Promises, work rates, costs and penalties are
+> illustrative settings in `config.yml`, each with its reason.
 
-| | |
-|---|---|
-| ![Overview](assets/screenshots/terminal_1280.webp) **Overview**: the terminal in one minute, the story of one late shipment, five questions with their answers | ![Measures](assets/screenshots/kpis_1280.webp) **Measures**: the KPI dictionary in plain words, live filters, on time by hour and weekday, terminal against customer time |
-| ![Data checks](assets/screenshots/dq_1280.webp) **Data checks**: a check per planted error, how much each catches, the headline under five versions of the records | ![Early warning](assets/screenshots/risk_1280.webp) **Early warning**: the fast-track slider, what the model may use, what makes a shipment risky, calibration |
-| ![Staffing](assets/screenshots/roster_1280.webp) **Staffing**: current against recommended, service and cost, what extra hours buy, the integer program | ![Disruption](assets/screenshots/disruption_1280.webp) **Disruption**: four staffing responses to the same broken schedule, and the model's drift |
-| ![Legal desk](assets/screenshots/legal_1280.webp) **Legal desk**: a plain shipment file to download, a contract promise tester, lateness caused by the disruption alone | ![Ask the lab](assets/screenshots/ask_1280.webp) **Ask the lab**: questions in plain words, answered from the stored results |
-| ![Methods](assets/screenshots/methods_1280.webp) **Methods**: the glossary, every assumption with its reason, method choices, limits and tests | ![Phone](assets/screenshots/disruption_390.webp) **On a phone** |
+## The story
 
-A 60 to 90 second walk-through (the story on the Overview, then Disruption: moving 40% of flights into rush hours and
-switching from the recommended to the re-planned roster) goes here: `assets/screenshots/walkthrough.gif`.
+{{sentences.story|raw}}
 
-## Context
+The app's overview tells it in six chapters, filling in the shipment's own timeline as you go, and ends on the
+question it raises: would fast-tracking it have saved those minutes? The Legal desk opens the same shipment's file.
 
-- **Milestones.** The lab uses the import half of the Cargo iQ route map: arrival (ARR), received from flight at
-  breakdown (RCF), customer notified that freight is ready (NFD) and delivery (DLV). The handler's segment runs from
-  ARR to NFD. Source: IATA Cargo Webinars, Cargo iQ, 12 October 2020, slide 27, "Basic Cargo iQ Route Map"
-  ([PDF](https://www.iata.org/contentassets/23608a1cdaa543ef877cc617ce99d21e/cargo-iq-master-slides.pdf)).
-- **Scale of a Gulf hub.** Dubai International handled 2.15 million metric tonnes of cargo in 2025, eleventh in the
-  world and down 1.4% on the year before, according to the Airports Council International traffic dataset as reported
-  by Khaleej Times on 15 July 2026
-  ([article](https://www.khaleejtimes.com/business/aviation/dubai-airport-ranked-second-busiest-as-global-passenger-traffic-reaches-10-billion-in-2025)).
-- **A broken schedule is not hypothetical.** Reporting the airport operator's first-quarter 2026 traffic, Gulf News
-  gave cargo volumes of 399,600 tonnes, down 22.7%, under regional airspace disruption (last updated 4 May 2026,
-  [article](https://gulfnews.com/business/aviation/dubai-airport-powers-through-war-disruption-with-6-million-passengers-1.500527813)).
-  The original operator release is not linked from the article.
-- **Synthetic data.** Everything in the app comes from a seeded simulation. No terminal, airline, airport or system
-  vendor is named, carriers are "Carrier A" to "Carrier T", and origins are regions. Promises, work rates, costs and
-  penalties are illustrative assumptions in `config.yml`, not industry standards.
+## Five questions, five answers
 
-## Method
+| | The question | The answer |
+|:-:|---|---|
+| **I** | How often is the freight ready on time? | **{{nfd_on_time|pct}}** of shipments are ready to collect within the promise. The slowest tenth take more than {{handler_p90_h|hrs}} from landing. After that, the waiting belongs to customs and the customer: the terminal holds only {{handler_share_of_dwell|pct}} of the time freight spends at the airport. |
+| **II** | Can the records be trusted as they arrive? | Taken at face value they say **{{dq_raw|pct}}** on time; the truth is {{dq_truth|pct}}. Automatic checks fix what is safe and set the rest aside, which brings it to {{dq_repaired|pct}}. {{sentences.timezone|raw}} |
+| **III** | Can late shipments be spotted when the plane lands? | **{{model_catch|pct0}}** of the shipments that end up late are among the riskiest {{expedite_share|pct0}} an early-warning model flags at landing. A random pick of the same size would catch {{expedite_share|pct0}}. |
+| **IV** | How many people should work each shift? | {{sentences.roster|raw}} |
+| **V** | What happens when the flight schedule breaks? | {{sentences.headline|raw}} {{sentences.flex|raw}} |
+
+## Try it
+
+The [live app](https://cargo-ops-lab.streamlit.app/) has nine pages. Each opens with the short version (the question,
+the answer and why it matters) and keeps the SQL, the scores and the math under the hood, further down.
+
+- **Follow one shipment.** Step through the story on the overview with Back and Next.
+- **Filter the measures.** Pick types of cargo, airlines or shifts, and every measure recalculates.
+- **Fast-track the riskiest.** Slide the share of shipments flagged at landing and see how many late ones it catches.
+- **Break the schedule.** Squeeze flights into rush hours, take freight away, and switch between four staffing responses.
+- **Look up a shipment.** On the Legal desk, any shipment number returns a plain file: what was promised, whether it
+  was kept, and whose clock any delay was on. It downloads as a text file.
+- **Test a contract promise.** Pick a type of cargo and a promise in hours, and see how often it would have been kept
+  and what the penalties would cost a week and a year.
+- **Ask the lab.** Ask a question in your own words, or paste a shipment number.
+
+<p align="center">
+  <img src="assets/readme/schedule.webp" width="920" alt="When the Schedule Breaks: 40% of flights moved into rush hours and the re-planned roster selected, with the four staffing responses compared">
+  <br><sub>When the Schedule Breaks: {{dis_share|pct0}} of flights moved into rush hours, four staffing responses to the same freight.</sub>
+</p>
+
+<p align="center">
+  <img src="assets/readme/legal.webp" width="920" alt="The Legal desk: the story's shipment looked up, with the promise, the timeline and a plain verdict">
+  <br><sub>The Legal desk: the story's shipment, {{story.id|raw}}, as a plain shipment file. Not legal advice.</sub>
+</p>
+
+### Every page
+
+<table>
+  <tr>
+    <td width="33%" valign="top"><a href="assets/screenshots/terminal_1280.webp"><img src="assets/readme/cards/terminal.webp" alt="Overview"></a><br><b>Overview</b><br><sub>The terminal in one minute, the story, five answers, a glossary</sub></td>
+    <td width="33%" valign="top"><a href="assets/screenshots/kpis_1280.webp"><img src="assets/readme/cards/kpis.webp" alt="Measures"></a><br><b>I. Measures</b><br><sub>What counts as on time: the KPI dictionary in plain words, live filters</sub></td>
+    <td width="33%" valign="top"><a href="assets/screenshots/dq_1280.webp"><img src="assets/readme/cards/dq.webp" alt="Data checks"></a><br><b>II. Data checks</b><br><sub>Seven planted errors, a check for each, and what bad data does to the headline</sub></td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top"><a href="assets/screenshots/risk_1280.webp"><img src="assets/readme/cards/risk.webp" alt="Early warning"></a><br><b>III. Early warning</b><br><sub>Which shipments will be late: the fast-track slider and what makes a shipment risky</sub></td>
+    <td width="33%" valign="top"><a href="assets/screenshots/roster_1280.webp"><img src="assets/readme/cards/roster.webp" alt="Staffing"></a><br><b>IV. Staffing</b><br><sub>How many people each shift needs: current against recommended, service and cost</sub></td>
+    <td width="33%" valign="top"><a href="assets/screenshots/disruption_1280.webp"><img src="assets/readme/cards/disruption.webp" alt="Disruption"></a><br><b>V. Disruption</b><br><sub>When the Schedule Breaks: four staffing responses, and the model's drift</sub></td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top"><a href="assets/screenshots/legal_1280.webp"><img src="assets/readme/cards/legal.webp" alt="Legal desk"></a><br><b>Legal desk</b><br><sub>Was the terminal at fault? A shipment file, a promise tester, lateness caused by disruption alone</sub></td>
+    <td width="33%" valign="top"><a href="assets/screenshots/ask_1280.webp"><img src="assets/readme/cards/ask.webp" alt="Ask the lab"></a><br><b>Ask the lab</b><br><sub>Questions in plain words, answered from the stored results</sub></td>
+    <td width="33%" valign="top"><a href="assets/screenshots/methods_1280.webp"><img src="assets/readme/cards/methods.webp" alt="Methods"></a><br><b>Methods</b><br><sub>The glossary, every assumption with its reason, the limits and the tests</sub></td>
+  </tr>
+</table>
+
+<sub>Click a card for the full page. Every page also works on a phone, for example
+[the disruption page at 390 pixels](assets/screenshots/disruption_390.webp).</sub>
+
+## How it works
+
+```mermaid
+flowchart LR
+    A["Timetable and assumptions<br/>config.yml"] --> B["Simulated terminal<br/>SimPy"]
+    B --> C["Event log<br/>every milestone"]
+    C --> D["Data checks<br/>SQL rules and repair"]
+    D --> E["Measures<br/>KPI dictionary"]
+    D --> F["Early-warning model<br/>scikit-learn"]
+    B --> G["Roster optimizer<br/>PuLP and CBC"]
+    G --> H["Disruption scenarios<br/>four responses"]
+    E --> I[("Stored results<br/>data/")]
+    F --> I
+    G --> I
+    H --> I
+    I --> J["The app<br/>Streamlit"]
+```
+
+A build script runs everything once and stores the results; the app only reads them, so every number on screen and
+in this README comes from those files.
 
 1. **Simulation.** A weekly timetable of belly and freighter flights becomes 18 months of arrivals with delays,
    cancellations and seasonal volume. A SimPy model runs the floor: ULDs are towed in, intact ULDs are checked in,
@@ -90,6 +149,42 @@ switching from the recommended to the re-planned roster) goes here: `assets/scre
    policies meet the same arrivals: legacy, the roster optimized on the normal timetable, a roster re-optimized on the
    disrupted schedule, and the normal-timetable roster plus a call-in pool triggered by backlog. The risk model trained
    on normal months is scored on the disrupted arrivals.
+7. **Plain-language layer.** A story picked by a fixed rule (the first late shipment in the test months that the model
+   flagged), a short version on every page, a glossary, a shipment lookup and a chat, all reading the same stored
+   results. Tests check that the story follows its rule and that the lookup and the chat quote the stored numbers.
+
+### The numbers, for analysts
+
+Every figure below is read from `data/headline.json`, which the build writes from the stored results.
+
+| Question | Answer |
+|---|---|
+| NFD on time | {{nfd_on_time|pct}} of AWBs, cleaned data, legacy roster |
+| Handler time, arrival to NFD | Median {{handler_p50_h|hrs}}; the slowest tenth over {{handler_p90_h|hrs}} |
+| Handler share of dwell | {{handler_share_of_dwell|pct}} of the time between arrival and delivery; the customer holds the rest |
+| Dirty data | The raw feed reads {{dq_raw|pct}} against a true {{dq_truth|pct}}; after repair and quarantine, {{dq_repaired|pct}} |
+| Risk model at arrival | {{model|raw}}: AUC {{model_auc|f3}} on the test months; the riskiest {{expedite_share|pct0}} hold {{model_catch|pct0}} of late AWBs |
+| Roster | Optimized: {{opt_on_time|pct}} on {{opt_hours_week|num}} staff hours a week; legacy: {{legacy_on_time|pct}} on {{legacy_hours_week|num}} |
+| Disruption, {{dis_share|pct0}} of flights in waves | Static {{dis_static|pct}}, re-planned {{dis_replanned|pct}}, static plus call-in pool {{dis_flex|pct}}, legacy {{dis_legacy|pct}} |
+| Model drift | {{sentences.drift|raw}} |
+
+## Context
+
+- **Milestones.** The lab uses the import half of the Cargo iQ route map: arrival (ARR), received from flight at
+  breakdown (RCF), customer notified that freight is ready (NFD) and delivery (DLV). The handler's segment runs from
+  ARR to NFD. Source: IATA Cargo Webinars, Cargo iQ, 12 October 2020, slide 27, "Basic Cargo iQ Route Map"
+  ([PDF](https://www.iata.org/contentassets/23608a1cdaa543ef877cc617ce99d21e/cargo-iq-master-slides.pdf)).
+- **Scale of a Gulf hub.** Dubai International handled 2.15 million metric tonnes of cargo in 2025, eleventh in the
+  world and down 1.4% on the year before, according to the Airports Council International traffic dataset as reported
+  by Khaleej Times on 15 July 2026
+  ([article](https://www.khaleejtimes.com/business/aviation/dubai-airport-ranked-second-busiest-as-global-passenger-traffic-reaches-10-billion-in-2025)).
+- **A broken schedule is not hypothetical.** Reporting the airport operator's first-quarter 2026 traffic, Gulf News
+  gave cargo volumes of 399,600 tonnes, down 22.7%, under regional airspace disruption (last updated 4 May 2026,
+  [article](https://gulfnews.com/business/aviation/dubai-airport-powers-through-war-disruption-with-6-million-passengers-1.500527813)).
+  The original operator release is not linked from the article.
+- **Synthetic data.** Everything in the app comes from a seeded simulation. No terminal, airline, airport or system
+  vendor is named, carriers are "Carrier A" to "Carrier T", and origins are regions. Promises, work rates, costs and
+  penalties are illustrative assumptions in `config.yml`, not industry standards.
 
 ## What I would do with real data
 
@@ -110,24 +205,30 @@ switching from the recommended to the re-planned roster) goes here: `assets/scre
 python -m venv .venv
 .venv\Scripts\activate             # Windows; on macOS or Linux: source .venv/bin/activate
 pip install -r requirements-build.txt
-python scripts/build_results.py    # simulation, data quality, KPIs, model, roster, disruption, tests (about 20 minutes)
+python scripts/build_results.py    # simulation, data quality, KPIs, model, roster, disruption, tests (about 40 minutes)
 streamlit run app.py
 ```
 
 `requirements.txt` is what the deployed app needs: it only reads the precomputed results in `data/`. The build adds
 SimPy, scikit-learn, PuLP with the CBC solver, pytest and Playwright (`requirements-build.txt`). The raw event logs
-(about 50 MB) are not committed; the build regenerates them exactly from the seed.
-`python scripts/capture.py` takes the screenshots once the app is running.
+(about 50 MB) are not committed; the build regenerates them exactly from the seed. With the app running,
+`python scripts/capture.py` takes the page screenshots and `python scripts/capture_hero.py` the images in this README.
 
 Deployed on Streamlit Community Cloud with Python 3.12. Community Cloud's documented limits (as of February 2024, and
 subject to change) are about 2 CPU cores and 2.7 GB of memory at most; apps without traffic for 12 hours go to sleep
 and wake on the next visit.
+
+<details>
+<summary><b>Ask the lab with Claude (optional)</b></summary>
+<br>
 
 Ask the lab works without any key: it matches questions to answers written from the stored results. To have Claude
 answer instead, held to the same facts, add `ANTHROPIC_API_KEY = "..."` to the app's secrets (Community Cloud: the
 app's Settings, then Secrets; locally: `.streamlit/secrets.toml`, which is never committed). It uses Claude Opus 5.5
 at low effort, caps each visit at 20 questions, and `CHAT_MODEL = "..."` in the secrets picks another model. Every
 question then goes to the Anthropic API and is billed to that key.
+
+</details>
 
 ## Repository
 
@@ -137,11 +238,12 @@ pages/                  one file per page, nine in all
 lab/                    config, schedule, SimPy terminal, defects, KPIs, model, roster, disruption, UI,
                         shipments (the record lookup), ask (the chat)
 sql/                    kpis.sql, dq_rules.sql, features.sql
-scripts/                build_results.py, capture.py
+scripts/                build_results.py, capture.py, capture_hero.py
 config.yml              every assumption, one comment each
 data/                   results the app reads, headline.json, kpi_dictionary.csv, test_results.csv
-tests/                  engine bounds, reconciliation, data quality recall, leakage, splits, headline
+tests/                  engine bounds, reconciliation, data quality recall, leakage, splits, headline, plain layer
 docs/                   the README template (numbers are filled from data/headline.json)
+assets/                 the seal, page screenshots, README images
 ```
 
 ## Why I built this
@@ -165,6 +267,8 @@ is what I would bring to real data, and the section above lists what I would cha
 
 ---
 
-Part of a portfolio at [maidenpeter.github.io](https://maidenpeter.github.io/), alongside the
-[Instalment Persistency Lab](https://instalment-persistency-lab.streamlit.app/) and the
-[Health IBNR Lab](https://maidenpeter.shinyapps.io/health-ibnr-lab/).
+<p align="center">
+  <sub>Part of a portfolio at <a href="https://maidenpeter.github.io/">maidenpeter.github.io</a>, alongside the
+  <a href="https://instalment-persistency-lab.streamlit.app/">Instalment Persistency Lab</a> and the
+  <a href="https://maidenpeter.shinyapps.io/health-ibnr-lab/">Health IBNR Lab</a>.</sub>
+</p>

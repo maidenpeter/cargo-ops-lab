@@ -18,6 +18,7 @@ import plotly.io as pio
 import streamlit as st
 
 from lab import config as C
+from lab import headline as H
 
 APP = "Cargo Ops Lab"
 TAGLINE = ("When a plane lands with cargo, how often is the freight ready for the customer on time, and how many "
@@ -597,8 +598,7 @@ WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 SHIFTS = C.load()["shifts"]["names"]
 PRODUCT_LABELS = {"general": "General", "express": "Express", "perishable": "Perishable", "pharma": "Pharma",
                   "dangerous_goods": "Dangerous goods", "live_animals": "Live animals"}
-PRODUCT_NOUNS = {"general": "general freight", "express": "express freight", "perishable": "perishable goods",
-                 "pharma": "medicines", "dangerous_goods": "dangerous goods", "live_animals": "live animals"}
+PRODUCT_NOUNS = H.PRODUCT_NOUNS
 HU_LABELS = {"bup_breakdown": "Container, unpacked here", "bup_intact": "Container, passed on unopened", "loose": "Loose pieces"}
 # the risk model's inputs in everyday words
 FEATURE_LABELS = {

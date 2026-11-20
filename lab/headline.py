@@ -12,8 +12,38 @@ import pandas as pd
 from lab import config as C
 
 
+PRODUCT_NOUNS = {"general": "general freight", "express": "express freight", "perishable": "perishable goods",
+                 "pharma": "medicines", "dangerous_goods": "dangerous goods", "live_animals": "live animals"}
+
+
 def _read(name: str) -> pd.DataFrame:
     return pd.read_parquet(C.DATA / f"{name}.parquet")
+
+
+def story(chosen: str) -> dict:
+    """The shipment the overview's story follows: the earliest late shipment in the test months that the
+    early-warning model put on its fast-track list (lab.shipments.story_pick applies the same rule in the app)."""
+    cfg = C.load()
+    p = _read("model_predictions")
+    p["awb_id"] = p["awb_id"].astype(str)
+    p["score"] = p["p_hgb" if chosen == "Gradient boosting" else "p_lr"]
+    p["rank"] = p["score"].rank(pct=True)
+    cut = p["score"].quantile(1 - cfg["model"]["expedite_share"])
+    a = _read("awb_clean")
+    a["awb_id"] = a["awb_id"].astype(str)
+    a = a.set_index("awb_id")
+    hit = p[(p["late"] == 1) & (p["score"] >= cut) & p["awb_id"].isin(a.index)].sort_values("arr_ts").iloc[0]
+    r = a.loc[hit["awb_id"]]
+    sla = float(cfg["sla_hours"][str(r["product"])])
+    due = r["arr_ts"] + pd.Timedelta(hours=sla)
+    return {"id": hit["awb_id"], "flight": str(r["flight"]), "carrier": str(r["carrier"]),
+            "aircraft": "freighter" if str(r["flight_type"]) == "freighter" else "passenger plane",
+            "region": str(r["region"]), "product": str(r["product"]), "pieces": int(r["pieces"]),
+            "weight_kg": float(r["weight_kg"]), "sla_h": sla, "arr": r["arr_ts"].isoformat(),
+            "due": due.isoformat(), "nfd": r["nfd_ts"].isoformat(),
+            "flight_late_min": float((r["arr_ts"] - r["sched_arr"]).total_seconds() / 60),
+            "backlog": float(hit["backlog_at_arr"]), "score": float(hit["score"]), "rank": float(hit["rank"]),
+            "missed_by_min": float((r["nfd_ts"] - due).total_seconds() / 60)}
 
 
 def pct(x: float, d: int = 1) -> str:
@@ -72,6 +102,7 @@ def compute() -> dict:
         "vol_static": float(vf["on_time"]), "vol_static_late_week": float(vf["late_per_week"]),
         "drift_auc_base": float(drift.loc[base_key, "auc"]), "drift_auc": float(drift.loc[h_key, "auc"]),
         "drift_pred": float(drift.loc[h_key, "mean_pred"]), "drift_actual": float(drift.loc[h_key, "late_rate"]),
+        "story": story(chosen),
     }
     h["sentences"] = sentences(h)
     return h
@@ -128,8 +159,23 @@ def sentences(h: dict) -> dict:
     roster = (f"On the normal timetable, a recommended roster gets {pct(h['opt_on_time'])} of shipments ready on time "
               f"against {pct(h['legacy_on_time'])} for the current roster, with {h['opt_hours_week']:,.0f} staff hours "
               f"a week instead of {h['legacy_hours_week']:,.0f}.")
+    s = h["story"]
+    arr, nfd = pd.Timestamp(s["arr"]), pd.Timestamp(s["nfd"])
+    cfg = C.load()
+    test0 = pd.Timestamp(cfg["split"]["valid_end"]) + pd.Timedelta(days=1)
+    late = s["flight_late_min"]
+    lateness = (f"{late:.0f} minutes behind schedule" if late > 5 else f"{-late:.0f} minutes early" if late < -5
+                else "on schedule")
+    story_s = (f"{'Shortly after midnight on ' if arr.hour < 3 else 'On '}{arr:%A} {arr.day} {arr:%B %Y}, flight "
+               f"{s['flight']}, a {s['aircraft']} from {s['carrier']}, lands from {s['region']} {lateness}. On board is "
+               f"shipment {s['id']}: {s['pieces']} pieces of {PRODUCT_NOUNS[s['product']]} weighing "
+               f"{s['weight_kg']:,.1f} kg, promised ready within {s['sla_h']:g} hours. {s['backlog']:.0f} shipments are "
+               f"already waiting to be unpacked. The early-warning model flags it the moment the plane lands: riskier "
+               f"than {100 * s['rank']:.0f}% of the shipments from {test0:%B} to "
+               f"{pd.Timestamp(cfg['window']['cutoff']):%B %Y}. Even so, it is ready at {nfd:%H:%M}, "
+               f"{s['missed_by_min']:.0f} minutes after the promise runs out.")
     return {"headline": headline, "flex": flex, "volume": volume, "timezone": tz_s, "catch": catch, "drift": drift,
-            "roster": roster, "drift_direction": "over" if gap > 0 else "under"}
+            "roster": roster, "drift_direction": "over" if gap > 0 else "under", "story": story_s}
 
 
 def write(h: dict) -> None:

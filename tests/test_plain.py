@@ -16,6 +16,8 @@ def test_story_follows_its_fixed_rule(results_ready):
     assert rec["flagged"] and sc.loc[awb_id, "late"] == 1
     earlier = sc[(sc["arr_ts"] < sc.loc[awb_id, "arr_ts"]) & (sc["late"] == 1) & (sc["score"] >= S.flag_cut())]
     assert earlier.empty  # nothing earlier meets the rule
+    s = headline.read()["story"]  # the README tells the same story from the stored results
+    assert s["id"] == awb_id and abs(s["missed_by_min"] + rec["margin_min"]) < 1e-9
 
 
 def test_shipment_verdicts_match_the_promise(results_ready):
