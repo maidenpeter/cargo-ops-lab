@@ -182,7 +182,13 @@ def scene_shipment(r: dict, c: dict) -> str:
     lx, ly = polar(cx, cy, rr + 30, a0)
     b.append(text(lx - 4, ly - 6, f"lands {hm(r['arr'])}", 12.5, INK, "end"))
     ex, ey = polar(cx, cy, rr + 30, a0 + span)
-    b.append(text(ex + 6, ey + 4, f"due {hm(r['due'])}", 12.5, GOLD, "start" if (a0 + span) % 360 < 180 else "end"))
+    due = f"due {hm(r['due'])}"
+    if (a0 + span) % 360 >= 180:
+        b.append(text(ex - 6, ey + 4, due, 12.5, GOLD, "end"))
+    elif ex + 6 + 7 * len(due) > W - 4:  # too close to the right edge: tuck it under the dot
+        b.append(text(W - 6, ey + 22, due, 12.5, GOLD, "end"))
+    else:
+        b.append(text(ex + 6, ey + 4, due, 12.5, GOLD))
     b.append(text(cx, cy + 6, f"{r['sla_h']:g} h", 34, GOLD, "middle", F_NUM))
     b.append(text(cx, cy + 28, "promise", 13, INK2, "middle"))
     b.append(arrow(300, 205, 396, 205, p, "i"))
