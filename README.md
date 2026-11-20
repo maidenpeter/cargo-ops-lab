@@ -21,7 +21,7 @@
 <p align="center"><sub>A portfolio project by Marion Peter. Synthetic terminal. Illustrative only.</sub></p>
 
 <p align="center">
-  <img src="assets/readme/story.webp" width="920" alt="The story on the app's overview: one late shipment of medicines, chapter by chapter, over its own timeline">
+  <img src="assets/readme/story.webp" width="920" alt="The story on the app's overview: a journey map of six steps above a drawn timeline of one late shipment of medicines">
 </p>
 
 ## In one minute
@@ -43,8 +43,21 @@ terminal's analyst would be asked, in words anyone can follow, with the analyst'
 
 Shortly after midnight on Wednesday 1 July 2026, flight CR191, a freighter from Carrier R, lands from Europe 63 minutes behind schedule. On board is shipment AWB0192068: 28 pieces of medicines weighing 2,828.7 kg, promised ready within 4 hours. 41 shipments are already waiting to be unpacked. The early-warning model flags it the moment the plane lands: riskier than 91% of the shipments from July to September 2026. Even so, it is ready at 04:39, 6 minutes after the promise runs out.
 
-The app's overview tells it in six chapters, filling in the shipment's own timeline as you go, and ends on the
-question it raises: would fast-tracking it have saved those minutes? The Legal desk opens the same shipment's file.
+<table>
+  <tr>
+    <td width="33%" valign="top"><img src="assets/readme/story/ch1.webp" alt="The freighter descends to the runway, an hour late, with its shipments on board"><br><b>1. The plane lands</b><br><sub>An hour behind schedule, with one shipment of medicines on board</sub></td>
+    <td width="33%" valign="top"><img src="assets/readme/story/ch2.webp" alt="A container of medicines and a clock face showing its four-hour promise"><br><b>2. The promise starts</b><br><sub>The clock runs from landing to ready</sub></td>
+    <td width="33%" valign="top"><img src="assets/readme/story/ch3.webp" alt="Shipments waiting in a queue for the night crew to unpack them"><br><b>3. It joins a queue</b><br><sub>Shipments already waiting, more on the way, one crew</sub></td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top"><img src="assets/readme/story/ch4.webp" alt="A hundred shipments ranked by risk, with this one among the riskiest ten"><br><b>4. The early warning</b><br><sub>Flagged the moment it lands</sub></td>
+    <td width="33%" valign="top"><img src="assets/readme/story/ch5.webp" alt="The shipment's timeline, ready a few minutes after the promise ran out"><br><b>5. What happened</b><br><sub>Minutes past the promise, then the customer's wait</sub></td>
+    <td width="33%" valign="top"><img src="assets/readme/story/ch6.webp" alt="Three questions branching from the late shipment: staffing, fast-tracking and a broken schedule"><br><b>6. What would have helped?</b><br><sub>Three questions, each answered by a page of the lab</sub></td>
+  </tr>
+</table>
+
+In the app the six chapters sit on a journey map: click any step, or use Back and Next. The last chapter links to the
+Legal desk, which opens the same shipment's file.
 
 ## Five questions, five answers
 
@@ -61,12 +74,13 @@ question it raises: would fast-tracking it have saved those minutes? The Legal d
 The [live app](https://cargo-ops-lab.streamlit.app/) has nine pages. Each opens with the short version (the question,
 the answer and why it matters) and keeps the SQL, the scores and the math under the hood, further down.
 
-- **Follow one shipment.** Step through the story on the overview with Back and Next.
+- **Follow one shipment.** Step through the illustrated story on the overview: click a step on the journey map, or
+  use Back and Next.
 - **Filter the measures.** Pick types of cargo, airlines or shifts, and every measure recalculates.
 - **Fast-track the riskiest.** Slide the share of shipments flagged at landing and see how many late ones it catches.
 - **Break the schedule.** Squeeze flights into rush hours, take freight away, and switch between four staffing responses.
 - **Look up a shipment.** On the Legal desk, any shipment number returns a plain file: what was promised, whether it
-  was kept, and whose clock any delay was on. It downloads as a text file.
+  was kept, and whose clock any delay was on. It downloads as a page you can print or save as a PDF.
 - **Test a contract promise.** Pick a type of cargo and a promise in hours, and see how often it would have been kept
   and what the penalties would cost a week and a year.
 - **Ask the lab.** Ask a question in your own words, or paste a shipment number.

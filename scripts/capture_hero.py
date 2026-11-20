@@ -4,7 +4,7 @@ Start the app first (streamlit run app.py), then:
 
     python scripts/capture_hero.py --base http://localhost:8501
 
-Writes assets/readme/story.webp, schedule.webp, legal.webp and cards/<page>.webp.
+Writes assets/readme/story.webp, story/ch1.webp to ch6.webp, schedule.webp, legal.webp and cards/<page>.webp.
 """
 from __future__ import annotations
 
@@ -70,7 +70,18 @@ def main() -> None:
             shot(page, out / "cards" / f"{pg['key']}.webp")
             print("card", pg["key"])
 
-        # the story at chapter five, with the timeline filled in
+        # each chapter's drawing, for the storyboard in the README
+        for n in range(1, 7):
+            page.goto(f"{args.base}/?story={n}", wait_until="domcontentloaded")
+            settle(page)
+            tmp = out / "story" / f"ch{n}.png"
+            tmp.parent.mkdir(parents=True, exist_ok=True)
+            page.locator(".scene").first.screenshot(path=str(tmp))
+            Image.open(tmp).convert("RGB").save(tmp.with_suffix(".webp"), "WEBP", quality=84, method=6)
+            tmp.unlink()
+        print("storyboard")
+
+        # the story at chapter five, with the timeline filled in, reached the way a visitor would
         page.goto(args.base, wait_until="domcontentloaded")
         settle(page)
         for _ in range(4):

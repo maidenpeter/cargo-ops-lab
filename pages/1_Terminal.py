@@ -3,7 +3,9 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from lab import config as C
+from lab import scenarios as X
 from lab import shipments as S
+from lab import story
 from lab import ui
 
 h = ui.headline()
@@ -33,119 +35,89 @@ ui.takeaway("<b>How to read it.</b> Start with the story below. Every page then 
 story_id = S.story_pick()
 if story_id:
     r = S.record(story_id)
-    on_flight = S.book()
-    n_flight = int(((on_flight["flight"].astype(str) == r["flight"]) & (on_flight["arr_ts"] == r["arr"])).sum())
-    late_min = (r["arr"] - r["sched"]).total_seconds() / 60
+    bk = S.book()
     wd, si = S.shift_of(r["arr"])
-    legacy_ros, rec_ros = C.legacy_roster(), ui.table("rosters")
-    crew_now = int(legacy_ros[wd][si])
-    crew_rec = int(rec_ros[(rec_ros["policy"] == "optimized") & (rec_ros["weekday"] == wd) & (rec_ros["shift"] == si)]["headcount"].iloc[0])
-    shift_name = ui.SHIFTS[si].lower()
-    noun = ui.PRODUCT_NOUNS[r["product"]]
+    ros = ui.table("rosters")
+    dis = ui.table("disruption")
+    late_at = lambda key: float(dis[(dis["scenario"] == key) & (dis["policy"] == "static")]["late_per_week"].iloc[0])  # noqa: E731
+    ctx = {
+        "n_flight": int(((bk["flight"].astype(str) == r["flight"]) & (bk["arr_ts"] == r["arr"])).sum()),
+        "flight_late_min": (r["arr"] - r["sched"]).total_seconds() / 60,
+        "crew_now": int(C.legacy_roster()[wd][si]),
+        "crew_rec": int(ros[(ros["policy"] == "optimized") & (ros["weekday"] == wd) & (ros["shift"] == si)]["headcount"].iloc[0]),
+        "shift": ui.SHIFTS[si].lower(), "noun": ui.PRODUCT_NOUNS[r["product"]],
+        "priority": r["product"] in cfg["priority_products"], "expedite_share": cfg["model"]["expedite_share"],
+        "dis_share": h["dis_share"], "late_base": late_at(X.key(0.0, 0.0)), "late_dis": late_at(X.key(h["dis_share"], 0.0)),
+    }
+    noun, lm = ctx["noun"], ctx["flight_late_min"]
+    hm = lambda ts: f"{ts:%H:%M}"  # noqa: E731
+    behind = (f"{lm:.0f} minutes behind schedule" if lm > 5 else f"{-lm:.0f} minutes early" if lm < -5 else "on schedule")
     when = ("Shortly after midnight on " if r["arr"].hour < 3 else "On ") + S.when(r["arr"])
-    lateness = (f", {late_min:.0f} minutes behind schedule" if late_min > 5 else
-                f", {-late_min:.0f} minutes early" if late_min < -5 else ", on schedule")
-    if crew_rec == crew_now:
-        helped = (f"The recommended roster keeps {crew_now} people on that {shift_name} shift, so staffing alone would "
-                  f"not have changed this night.")
-    else:
-        helped = (f"The recommended roster puts {crew_rec} people on that {shift_name} shift instead of {crew_now}.")
-    if r.get("flagged"):
-        helped += (" The early-warning model did flag it, though: a supervisor watching the list could have moved it "
-                   "up. Whether that would have saved the minutes it missed by is a question for a trial on the floor, "
-                   "not for the records.")
-    helped += " The five questions below show what the lab can answer."
+    higher = 100 - round(100 * r.get("rank", 0))
+    top = round(100 * ctx["expedite_share"])
+    late = r["margin_min"] is not None and r["margin_min"] < 0
+    flagged = bool(r.get("flagged"))
+    backlog, coming = f"{r.get('backlog', 0):.0f}", f"{r.get('due_next_2h', 0):.0f}"
+    # (icon, step name, step caption, chapter title, the words, key facts, the time on the clock)
     chapters = [
-        ("A freighter lands" if r["aircraft"] == "freighter" else "A plane lands",
-         f"{when}, flight {r['flight']}, a {r['aircraft']} from {r['carrier']}, lands from {r['region']} at "
-         f"{r['arr']:%H:%M}{lateness}. On board are {n_flight} shipments."),
-        (f"One shipment of {noun}",
-         f"One of them, {r['id']}, is {r['pieces']} pieces of {noun} weighing {r['weight']:,.1f} kg, {r['unit']}. "
-         f"{noun.capitalize()} come with a {r['sla_h']:g}-hour promise: the customer should hear the shipment is ready "
-         f"by {r['due']:%H:%M}."),
-        ("The queue",
-         f"The terminal is already busy. {r.get('backlog', 0):.0f} shipments that landed earlier are still waiting to be "
-         f"unpacked, and {r.get('due_next_2h', 0):.0f} more are due in the next two hours. The {shift_name} shift has "
-         f"{crew_now} people scheduled."
-         + (f" {noun.capitalize()} go near the front of the queue, but a crew cannot leave a container half unpacked"
-            + (", and this one is large." if r["weight"] >= 1000 else ".")
-            if r["product"] in cfg["priority_products"] else "")),
-        ("The early warning",
-         f"Scoring it the moment the plane lands, the early-warning model gives it a {r.get('score', 0):.0%} chance of "
-         f"being late. That sounds low, but it is riskier than {r.get('rank', 0):.0%} of the shipments in these months"
-         + (", so it lands on the fast-track list." if r.get("flagged") else ".")),
-        ("What happened",
-         f"It was checked in at {r['rcf']:%H:%M}, {S.dur((r['rcf'] - r['arr']).total_seconds() / 60)} after landing, and "
-         f"ready to collect at {r['nfd']:%H:%M}: "
-         + (f"{S.dur(r['margin_min'])} past the promise." if not r["on_time"] else f"{S.dur(r['margin_min'])} inside the promise.")
-         + (f" The customer collected it at {r['dlv']:%H:%M}, {S.dur(r['customer_min'])} later, on the customer's clock."
-            if r["customer_min"] is not None else "")),
-        ("What the lab asks next", helped),
+        ("plane", "Lands", hm(r["arr"]), f"A {r['aircraft']} lands",
+         f"{when}, flight {r['flight']} from {r['carrier']} touches down from {r['region']}, {behind}, with "
+         f"{ctx['n_flight']} shipments on board.",
+         [f"Flight {r['flight']}", f"Landed {hm(r['arr'])}", behind.replace(" behind schedule", " late")], hm(r["arr"])),
+        ("crate", "One shipment", noun, f"One shipment of {noun}",
+         f"We follow {r['id']}: {r['pieces']} pieces of {noun} weighing {r['weight']:,.1f} kg. Its promise: ready to "
+         f"collect within {r['sla_h']:g} hours of landing, so by {hm(r['due'])}.",
+         [r["id"], f"{r['sla_h']:g}-hour promise", f"Due {hm(r['due'])}"], hm(r["arr"])),
+        ("queue", "The queue", f"{backlog} waiting", "It joins a queue",
+         f"{backlog} shipments are already waiting to be unpacked, and {coming} more are due within two hours. The "
+         f"{ctx['shift']} shift has {ctx['crew_now']} people to unpack them all.",
+         [f"{backlog} waiting", f"{coming} due soon", f"{ctx['crew_now']} on shift"], hm(r["arr"])),
+        ("flag", "Flagged" if flagged else "Scored", f"{r.get('score', 0):.0%} risk", "The early warning",
+         f"The moment it lands, the early-warning model gives it a {r.get('score', 0):.0%} chance of being late. Only "
+         f"{higher} in 100 shipments score higher, "
+         + ("so it goes on the fast-track list for supervisors." if flagged else "so it stays off the list."),
+         [f"{r.get('score', 0):.0%} risk", f"Riskiest {top} in 100" if flagged else "Not flagged",
+          "Fast-track list" if flagged else "No alert"], hm(r["arr"])),
+        ("clock", "Ready", f"{hm(r['nfd'])}, {S.dur(r['margin_min'])} {'late' if late else 'early'}", "What happened",
+         f"It is checked in at {hm(r['rcf'])} and ready at {hm(r['nfd'])}: {S.dur(r['margin_min'])} "
+         + ("after the promise ran out." if late else "inside the promise.")
+         + (f" The customer collects it at {hm(r['dlv'])}; that wait is on the customer's clock."
+            if r["customer_min"] is not None else ""),
+         [f"Ready {hm(r['nfd'])}", f"{S.dur(r['margin_min'])} {'late' if late else 'early'}"]
+         + ([f"Collected {hm(r['dlv'])}"] if r["customer_min"] is not None else []), hm(r["nfd"])),
+        ("question", "What next", "three questions", "What would have helped?",
+         "One late shipment raises three questions. Each has a page in this lab that answers it for every shipment, "
+         "not just this one.", [], "afterwards"),
     ]
-    step = min(st.session_state.get("story", 0), len(chapters) - 1)
+    q = str(st.query_params.get("story", "1"))
+    step = min(max(int(q) - 1, 0), len(chapters) - 1) if q.isdigit() else 0
 
-    # the shipment's own timeline, revealed one chapter at a time
-    t0 = r["arr"] - pd.Timedelta(minutes=20)
-    t1 = max(x for x in (r["due"], r["nfd"], r["dlv"]) if pd.notna(x)) + pd.Timedelta(minutes=30)
-    span = (t1 - t0).total_seconds()
-    X0, W = 30, 940
-    xt = lambda t: X0 + W * (t - t0).total_seconds() / span  # noqa: E731
-    font = 'font-family="IBM Plex Sans Condensed, Arial Narrow, sans-serif"'
-    parts = [f'<line x1="{X0}" y1="120" x2="{X0 + W}" y2="120" stroke="{ui.RULE_STRONG}" stroke-width="1"/>']
-    hour = t0.ceil("h")
-    while hour < t1:
-        parts.append(f'<line x1="{xt(hour):.1f}" y1="116" x2="{xt(hour):.1f}" y2="124" stroke="{ui.RULE_STRONG}"/>'
-                     f'<text x="{xt(hour):.1f}" y="142" text-anchor="middle" {font} font-size="13" fill="{ui.MUTED}">{hour:%H:%M}</text>')
-        hour += pd.Timedelta(hours=1)
-    xa = xt(r["arr"])
-    parts.append(f'<circle cx="{xa:.1f}" cy="120" r="6" fill="{ui.INK}"/>'
-                 f'<text x="{xa:.1f}" y="168" text-anchor="start" {font} font-size="14" fill="{ui.INK}">Lands {r["arr"]:%H:%M}</text>')
-    if step >= 1:
-        xd = xt(r["due"])
-        parts.append(f'<line x1="{xd:.1f}" y1="34" x2="{xd:.1f}" y2="132" stroke="{ui.GOLD}" stroke-width="1.6" stroke-dasharray="5 4"/>'
-                     f'<text x="{xd:.1f}" y="26" text-anchor="middle" {font} font-size="14" fill="{ui.GOLD}">Promise runs out {r["due"]:%H:%M}</text>')
-    if step >= 2:
-        parts.append(f'<text x="{xa:.1f}" y="58" text-anchor="start" {font} font-size="14" fill="{ui.INK2}">'
-                     f'{r.get("backlog", 0):.0f} already waiting, {r.get("due_next_2h", 0):.0f} more due in 2 hours</text>')
-    if step >= 3 and "score" in r:
-        parts.append(f'<text x="{xa:.1f}" y="80" text-anchor="start" {font} font-size="14" fill="{ui.LOSS_INK if r.get("flagged") else ui.INK2}">'
-                     f'Early warning: {r["score"]:.0%} risk' + (", on the fast-track list" if r.get("flagged") else "") + '</text>')
-    if step >= 4:
-        xr, xn = xt(r["rcf"]), xt(r["nfd"])
-        cut_x = min(xn, xt(r["due"]))
-        parts.append(f'<rect x="{xa:.1f}" y="104" width="{cut_x - xa:.1f}" height="14" fill="{ui.GOLD}" opacity=".85"/>')
-        if xn > cut_x:
-            parts.append(f'<rect x="{cut_x:.1f}" y="104" width="{xn - cut_x:.1f}" height="14" fill="{ui.LOSS}"/>')
-        if pd.notna(r["dlv"]):
-            xl = xt(r["dlv"])
-            parts.append(f'<rect x="{xn:.1f}" y="122" width="{xl - xn:.1f}" height="8" fill="{ui.CTX}"/>'
-                         f'<circle cx="{xl:.1f}" cy="126" r="5" fill="{ui.NEU}"/>'
-                         f'<text x="{xl:.1f}" y="168" text-anchor="end" {font} font-size="14" fill="{ui.INK2}">Collected {r["dlv"]:%H:%M}</text>')
-        parts.append(f'<circle cx="{xr:.1f}" cy="111" r="4" fill="{ui.INK}"/>'
-                     f'<circle cx="{xn:.1f}" cy="111" r="6" fill="{ui.LOSS_INK if not r["on_time"] else ui.GAIN_INK}"/>'
-                     f'<text x="{xn:.1f}" y="190" text-anchor="middle" {font} font-size="14" fill="{ui.INK}">'
-                     f'Checked in {r["rcf"]:%H:%M}, ready {r["nfd"]:%H:%M}</text>')
-    svg_story = (f'<div class="story-line"><svg viewBox="0 0 1000 200" role="img" aria-label="Timeline of shipment '
-                 f'{r["id"]}">{"".join(parts)}</svg></div>')
-    dots = "".join(f'<i class="{"on" if i <= step else ""}"></i>' for i in range(len(chapters)))
-    title, body = chapters[step]
-    with ui.plate("The story: one shipment, one night", f"A real record from the simulation, {r['id']}. It was picked by "
-                                                        "a fixed rule: the first late shipment in the test months that "
-                                                        "the early-warning model had flagged."):
-        st.markdown(f'<div class="story"><div class="dots">{dots}<span>Chapter {step + 1} of {len(chapters)}</span></div>'
-                    f'<h3>{ui.esc(title)}</h3><p>{ui.esc(body)}</p></div>{svg_story}', unsafe_allow_html=True)
-        b1, b2, _ = st.columns([0.18, 0.22, 0.6])
-        if b1.button("Back", icon=":material/arrow_back:", disabled=step == 0, width="stretch"):
-            st.session_state.story = step - 1
-            st.rerun()
-        last = step == len(chapters) - 1
-        if b2.button("Start again" if last else "Next", icon=":material/replay:" if last else ":material/arrow_forward:",
-                     type="primary", width="stretch"):
-            st.session_state.story = 0 if last else step + 1
-            st.rerun()
-        if last:
-            st.page_link("pages/8_Legal.py", label=f"Open this shipment's file on the Legal desk ({r['id']})",
-                         icon=":material/gavel:")
+    def to_chapter(n: int) -> None:
+        st.query_params["story"] = str(n + 1)
+
+    _, _, _, title, words, facts, clock = chapters[step]
+    with ui.plate("The story: one shipment, one night", "A real record from the simulation, picked by a fixed rule: the "
+                                                        "first late shipment in the test months that the early-warning "
+                                                        "model flagged. Click any step, or use Next."):
+        st.markdown(story.journey([c[:3] for c in chapters], step), unsafe_allow_html=True)
+        left, right = st.columns([0.6, 0.4], gap="large", vertical_alignment="center")
+        with left:
+            st.markdown(f'<div class="scene">{story.SCENES[step](r, ctx)}</div>', unsafe_allow_html=True)
+        with right:
+            chips = "".join(f"<span>{ui.esc(f)}</span>" for f in facts)
+            dots = "".join(f'<i class="{"on" if i <= step else ""}"></i>' for i in range(len(chapters)))
+            st.markdown(f'<div class="story"><div class="dots">{dots}<span>Chapter {step + 1} of {len(chapters)}, '
+                        f'{ui.esc(clock)}</span></div><h3>{ui.esc(title)}</h3><p>{ui.esc(words)}</p>'
+                        + (f'<div class="chips">{chips}</div>' if chips else "") + "</div>", unsafe_allow_html=True)
+            b1, b2 = st.columns(2)
+            last = step == len(chapters) - 1
+            b1.button("Back", icon=":material/arrow_back:", disabled=step == 0, width="stretch", on_click=to_chapter,
+                      args=(step - 1,))
+            b2.button("Start again" if last else "Next", icon=":material/replay:" if last else ":material/arrow_forward:",
+                      type="primary", width="stretch", on_click=to_chapter, args=(0 if last else step + 1,))
+            if last:
+                st.markdown(f'<p class="small">Or open <a href="legal?awb={r["id"]}" target="_self">this shipment&#39;s '
+                            f'file on the Legal desk</a>.</p>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------------- the journey
 a, b, c = k["arr_to_rcf_mean_h"], k["rcf_to_nfd_mean_h"], k["nfd_to_dlv_mean_h"]

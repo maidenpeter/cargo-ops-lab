@@ -29,7 +29,8 @@ ui.section("Look up a shipment", "Type a shipment number, or pick one of the exa
 ex = S.examples()
 c1, c2 = st.columns([0.45, 0.55], vertical_alignment="bottom")
 pick = c1.selectbox("Example", list(ex), index=0)
-typed = c2.text_input("Or type a shipment number", placeholder="for example AWB0192080")
+typed = c2.text_input("Or type a shipment number", placeholder="for example AWB0192080",
+                      value=S.find_id(str(st.query_params.get("awb", ""))) or "")  # the story links here with ?awb=
 awb_id = S.find_id(typed) or (typed.strip().upper() if typed.strip() else ex[pick])
 rec = S.record(awb_id)
 

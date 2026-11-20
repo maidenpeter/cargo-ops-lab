@@ -373,9 +373,18 @@ a.finding:hover .go {{ text-decoration:underline; }}
   padding:0 !important; }}
 .stMarkdown .story p {{ font-family:var(--serif); font-size:clamp(1.12rem,1.6vw,1.26rem); line-height:1.55; color:var(--ink);
   margin:0; }}
-.story-line {{ margin:.6rem 0 .4rem 0; }}
-.story-line svg {{ width:100%; height:auto; display:block; overflow:visible; }}
-@media (max-width:640px) {{ .story-line {{ overflow-x:auto; }} .story-line svg {{ min-width:640px; }} }}
+.story .chips {{ display:flex; flex-wrap:wrap; gap:.4rem; margin:.9rem 0 .2rem 0; }}
+.story .chips span {{ font-family:var(--ui); font-size:.88rem; color:var(--ink); border:1px solid var(--rule-strong);
+  background:var(--accent-soft); border-radius:999px; padding:.18rem .7rem; white-space:nowrap; }}
+.journey {{ margin:.3rem 0 .6rem 0; border-bottom:1px solid var(--rule-soft); padding-bottom:.2rem; }}
+.journey svg {{ width:100%; height:auto; display:block; overflow:visible; }}
+.journey a, .scene a {{ cursor:pointer; text-decoration:none !important; }}
+.journey a text, .scene a text {{ text-decoration:none; }}
+.scene a:hover rect:first-of-type {{ stroke:var(--accent); }}
+.journey a:hover circle:first-of-type {{ stroke-width:2.4; }}
+.scene svg {{ width:100%; height:auto; display:block; overflow:visible; }}
+@media (max-width:640px) {{ .journey, .scene {{ overflow-x:auto; -webkit-overflow-scrolling:touch; }}
+  .journey svg {{ min-width:620px; }} .scene svg {{ min-width:540px; }} }}
 
 /* glossary, and the plain legend of the staffing responses */
 .gloss {{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:0 2rem; margin:.3rem 0 .8rem 0; }}
