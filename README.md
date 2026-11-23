@@ -266,8 +266,7 @@ CargoShield, my other aviation project, looks at a cargo airline from the bookin
 it is, and what should cover for it cost? I wanted to see the other end, after the aircraft lands, when the same
 freight sits on a terminal floor and the promise to the customer starts to run out.
 
-The questions were familiar. Reserving taught me that a figure is only as good as the definitions and the data under
-it. A terminal's on-time rate has the same weak points: whose clock the waiting time is on, which milestones never
+The questions were familiar from reserving, where a figure is only as good as the definitions and the data under it. A terminal's on-time rate has the same weak points: whose clock the waiting time is on, which milestones never
 arrived, which time stamps are in the wrong time zone. So the lab defines each measure first, breaks a copy of the
 feed on purpose and measures what each break does to the answer, and only then builds a model or a roster on it.
 
